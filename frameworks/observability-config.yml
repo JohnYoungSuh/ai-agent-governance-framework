@@ -1,0 +1,533 @@
+# AI Agent Observability Configuration v2.0
+# OpenTelemetry-based monitoring for AI agents
+
+version: "2.0"
+framework: "AI Agent Governance Framework"
+
+# ==============================================================================
+# Overview
+# ==============================================================================
+# This configuration defines observability requirements for AI agents using
+# OpenTelemetry standards. It covers traces, metrics, and logs.
+
+# ==============================================================================
+# Global Configuration
+# ==============================================================================
+global:
+  service_name: "ai-agent"  # Override per agent
+  environment: "production"  # production, staging, development
+  version: "1.0.0"
+
+  # OpenTelemetry Collector endpoint
+  otlp_endpoint: "http://localhost:4317"  # gRPC
+  otlp_http_endpoint: "http://localhost:4318"  # HTTP
+
+  # Sampling strategy
+  sampling:
+    type: "probabilistic"  # always_on, always_off, probabilistic, rate_limiting
+    rate: 1.0  # 1.0 = 100% sampling (adjust for production)
+
+  # Resource attributes (attached to all telemetry)
+  resource_attributes:
+    service.namespace: "ai-agents"
+    deployment.environment: "${ENVIRONMENT}"
+    agent.tier: "${AGENT_TIER}"  # 1, 2, 3, or 4
+    agent.name: "${AGENT_NAME}"
+    agent.version: "${AGENT_VERSION}"
+
+# ==============================================================================
+# Distributed Tracing
+# ==============================================================================
+tracing:
+  enabled: true
+
+  # Spans to create for agent operations
+  spans:
+    # Agent task lifecycle
+    - name: "agent.task"
+      description: "Full agent task from input to output"
+      attributes:
+        - "agent.task.id"
+        - "agent.task.type"  # analysis, generation, action, etc.
+        - "user.id"
+        - "user.input.length"
+        - "agent.tier"
+
+    # LLM calls
+    - name: "llm.call"
+      description: "Individual LLM API call"
+      attributes:
+        - "llm.provider"  # anthropic, openai, azure, etc.
+        - "llm.model"
+        - "llm.model.version"
+        - "llm.temperature"
+        - "llm.max_tokens"
+        - "llm.tokens.input"
+        - "llm.tokens.output"
+        - "llm.cost"  # Calculated cost in USD
+        - "llm.latency_ms"
+        - "llm.response.status"  # success, error, timeout
+
+    # Data processing
+    - name: "data.redaction"
+      description: "PII/secrets redaction before LLM call"
+      attributes:
+        - "redaction.pii_found"  # boolean
+        - "redaction.secrets_found"  # boolean
+        - "redaction.items_redacted"  # count
+
+    - name: "data.validation"
+      description: "Input/output validation"
+      attributes:
+        - "validation.type"  # input, output
+        - "validation.result"  # pass, fail
+        - "validation.issues"  # list of issues found
+
+    # RAG operations
+    - name: "rag.query"
+      description: "Retrieval-augmented generation query"
+      attributes:
+        - "rag.vector_store"
+        - "rag.query.text"
+        - "rag.results.count"
+        - "rag.latency_ms"
+
+    # Human interactions
+    - name: "human.review"
+      description: "Human review or approval"
+      attributes:
+        - "human.reviewer.id"
+        - "human.review.decision"  # approved, rejected, modified
+        - "human.review.reason"
+
+    # Policy checks
+    - name: "policy.check"
+      description: "Policy or compliance check"
+      attributes:
+        - "policy.name"
+        - "policy.result"  # pass, fail
+        - "policy.tier_enforcement"  # boolean
+
+# ==============================================================================
+# Metrics
+# ==============================================================================
+metrics:
+  enabled: true
+  export_interval_seconds: 60
+
+  # Counter metrics (cumulative)
+  counters:
+    - name: "agent.tasks.total"
+      description: "Total number of agent tasks"
+      unit: "1"
+      labels:
+        - "agent.name"
+        - "agent.tier"
+        - "task.status"  # success, error, timeout
+
+    - name: "llm.calls.total"
+      description: "Total LLM API calls"
+      unit: "1"
+      labels:
+        - "llm.provider"
+        - "llm.model"
+        - "call.status"  # success, error, rate_limited
+
+    - name: "llm.tokens.total"
+      description: "Total tokens consumed"
+      unit: "tokens"
+      labels:
+        - "llm.provider"
+        - "llm.model"
+        - "token.type"  # input, output
+
+    - name: "llm.cost.total"
+      description: "Total LLM costs in USD"
+      unit: "USD"
+      labels:
+        - "agent.name"
+        - "llm.provider"
+        - "llm.model"
+
+    - name: "policy.violations.total"
+      description: "Total policy violations"
+      unit: "1"
+      labels:
+        - "agent.name"
+        - "policy.type"  # tier, security, compliance
+        - "violation.severity"  # low, medium, high, critical
+
+    - name: "human.reviews.total"
+      description: "Total human reviews"
+      unit: "1"
+      labels:
+        - "agent.name"
+        - "review.decision"  # approved, rejected
+
+  # Gauge metrics (point-in-time values)
+  gauges:
+    - name: "agent.budget.remaining"
+      description: "Remaining budget (daily)"
+      unit: "USD"
+      labels:
+        - "agent.name"
+        - "budget.period"  # daily, monthly
+
+    - name: "agent.budget.utilization"
+      description: "Budget utilization percentage"
+      unit: "percent"
+      labels:
+        - "agent.name"
+        - "budget.period"
+
+  # Histogram metrics (distributions)
+  histograms:
+    - name: "agent.task.duration"
+      description: "Agent task duration distribution"
+      unit: "ms"
+      buckets: [100, 250, 500, 1000, 2500, 5000, 10000, 30000]
+      labels:
+        - "agent.name"
+        - "task.type"
+
+    - name: "llm.call.duration"
+      description: "LLM call latency distribution"
+      unit: "ms"
+      buckets: [100, 250, 500, 1000, 2000, 5000, 10000]
+      labels:
+        - "llm.provider"
+        - "llm.model"
+
+    - name: "llm.call.cost"
+      description: "Per-call cost distribution"
+      unit: "USD"
+      buckets: [0.001, 0.01, 0.05, 0.10, 0.50, 1.00, 5.00]
+      labels:
+        - "llm.provider"
+        - "llm.model"
+
+# ==============================================================================
+# Structured Logging
+# ==============================================================================
+logging:
+  enabled: true
+  level: "INFO"  # DEBUG, INFO, WARN, ERROR
+  format: "json"  # json, text
+
+  # Log destinations
+  exporters:
+    - type: "stdout"
+      enabled: true
+
+    - type: "file"
+      enabled: true
+      path: "/var/log/ai-agents/${AGENT_NAME}/agent.log"
+      rotation:
+        max_size_mb: 100
+        max_files: 10
+
+    - type: "otlp"
+      enabled: true
+      endpoint: "${OTLP_ENDPOINT}"
+
+  # Fields to include in every log entry
+  default_fields:
+    - "timestamp"
+    - "level"
+    - "logger"
+    - "message"
+    - "trace_id"
+    - "span_id"
+    - "agent.name"
+    - "agent.tier"
+
+  # Sensitive data handling
+  redaction:
+    enabled: true
+    patterns:
+      - "(?i)(api[_-]?key|password|secret|token)\\s*[:=]\\s*['\"]?([^'\"\\s]+)"
+      - "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b"  # emails
+      - "\\b\\d{3}-\\d{2}-\\d{4}\\b"  # SSN
+
+# ==============================================================================
+# Cost Tracking
+# ==============================================================================
+cost_tracking:
+  enabled: true
+
+  # Token costs by provider/model (per 1K tokens)
+  token_costs:
+    anthropic:
+      claude-sonnet-4-5-20250929:
+        input: 0.003
+        output: 0.015
+      claude-sonnet-3-5-20241022:
+        input: 0.003
+        output: 0.015
+      claude-opus-4-20250514:
+        input: 0.015
+        output: 0.075
+
+    openai:
+      gpt-4-turbo:
+        input: 0.01
+        output: 0.03
+      gpt-3.5-turbo:
+        input: 0.0005
+        output: 0.0015
+
+  # Budget thresholds (alerts)
+  budgets:
+    tier_1:
+      daily: 10.00
+      monthly: 200.00
+      alert_thresholds: [0.50, 0.75, 0.90]  # Alert at 50%, 75%, 90%
+
+    tier_2:
+      daily: 100.00
+      monthly: 2000.00
+      alert_thresholds: [0.50, 0.75, 0.90]
+
+    tier_3:
+      daily: 250.00
+      monthly: 5000.00
+      alert_thresholds: [0.50, 0.75, 0.90, 0.95]
+
+    tier_4:
+      per_task: 500.00
+      monthly: 10000.00
+      alert_thresholds: [0.75, 0.90]
+
+# ==============================================================================
+# Alerting Rules
+# ==============================================================================
+alerting:
+  enabled: true
+
+  rules:
+    # Budget alerts
+    - name: "budget_threshold_exceeded"
+      condition: "agent.budget.utilization > 0.75"
+      severity: "warning"
+      notification_channels: ["slack", "email"]
+      message: "Agent {{ agent.name }} has used {{ budget_pct }}% of {{ period }} budget"
+
+    - name: "budget_critical"
+      condition: "agent.budget.utilization > 0.90"
+      severity: "critical"
+      notification_channels: ["slack", "email", "pagerduty"]
+      message: "CRITICAL: Agent {{ agent.name }} at {{ budget_pct }}% budget"
+
+    # Error rate alerts
+    - name: "high_error_rate"
+      condition: "rate(agent.tasks.total{status='error'}[5m]) > 0.10"
+      severity: "warning"
+      message: "Agent {{ agent.name }} error rate above 10%"
+
+    # Policy violations
+    - name: "policy_violation"
+      condition: "policy.violations.total > 0"
+      severity: "critical"
+      notification_channels: ["slack", "email", "security_team"]
+      message: "Policy violation detected: {{ policy.type }}"
+
+    # Performance degradation
+    - name: "slow_response_time"
+      condition: "histogram_quantile(0.95, agent.task.duration) > 30000"
+      severity: "warning"
+      message: "Agent {{ agent.name }} p95 latency above 30s"
+
+    # Cost spike
+    - name: "cost_spike"
+      condition: "rate(llm.cost.total[1h]) > rate(llm.cost.total[24h]) * 3"
+      severity: "critical"
+      message: "Cost spike detected: 3x normal rate"
+
+# ==============================================================================
+# Dashboards
+# ==============================================================================
+dashboards:
+  # Grafana dashboard definitions
+  grafana:
+    - name: "AI Agent Overview"
+      uid: "ai-agent-overview"
+      panels:
+        - title: "Tasks per Minute"
+          type: "graph"
+          query: "rate(agent.tasks.total[5m])"
+
+        - title: "Error Rate"
+          type: "graph"
+          query: "rate(agent.tasks.total{status='error'}[5m]) / rate(agent.tasks.total[5m])"
+
+        - title: "Daily Cost by Agent"
+          type: "bar"
+          query: "sum by (agent.name) (llm.cost.total)"
+
+        - title: "Budget Utilization"
+          type: "gauge"
+          query: "agent.budget.utilization"
+
+        - title: "p95 Latency"
+          type: "graph"
+          query: "histogram_quantile(0.95, agent.task.duration)"
+
+        - title: "Token Usage (Input vs Output)"
+          type: "stacked_area"
+          query: "rate(llm.tokens.total[5m])"
+
+    - name: "Cost Analysis"
+      uid: "ai-agent-cost"
+      panels:
+        - title: "Hourly Cost Trend"
+          type: "graph"
+          query: "rate(llm.cost.total[1h])"
+
+        - title: "Cost by Model"
+          type: "pie"
+          query: "sum by (llm.model) (llm.cost.total)"
+
+        - title: "Top 10 Expensive Agents"
+          type: "table"
+          query: "topk(10, sum by (agent.name) (llm.cost.total))"
+
+# ==============================================================================
+# Compliance & Audit
+# ==============================================================================
+compliance:
+  # Audit trail requirements
+  audit_trail:
+    enabled: true
+    retention_days: 90  # Hot storage
+    archive_retention_days: 365  # Cold storage
+
+    # Events that must be audited
+    required_events:
+      - "agent.task.started"
+      - "agent.task.completed"
+      - "llm.call.made"
+      - "human.review.requested"
+      - "human.review.completed"
+      - "policy.check.performed"
+      - "policy.violation.detected"
+      - "data.redaction.performed"
+      - "tier.permission.checked"
+
+    # Fields required in audit logs
+    required_fields:
+      - "event.timestamp"
+      - "event.type"
+      - "agent.name"
+      - "agent.tier"
+      - "user.id"
+      - "trace.id"
+      - "event.outcome"  # success, failure
+
+  # Regulatory compliance
+  regulations:
+    gdpr:
+      enabled: true
+      requirements:
+        - "Log PII redaction events"
+        - "Track consent for data processing"
+        - "Enable right-to-deletion auditing"
+
+    hipaa:
+      enabled: false
+      requirements:
+        - "Encrypt logs at rest and in transit"
+        - "Audit all access to PHI"
+        - "Maintain 6-year retention"
+
+    sox:
+      enabled: false
+      requirements:
+        - "Immutable audit logs"
+        - "Change tracking for all financial operations"
+
+# ==============================================================================
+# Integration Examples
+# ==============================================================================
+examples:
+  python:
+    file: "examples/observability/python_integration.py"
+    description: "OpenTelemetry integration for Python agents"
+
+  exporters:
+    prometheus:
+      endpoint: "http://localhost:9090"
+
+    jaeger:
+      endpoint: "http://localhost:14268/api/traces"
+
+    datadog:
+      api_key: "${DATADOG_API_KEY}"
+      site: "datadoghq.com"
+
+    splunk:
+      endpoint: "${SPLUNK_HEC_ENDPOINT}"
+      token: "${SPLUNK_HEC_TOKEN}"
+
+# ==============================================================================
+# Performance Tuning
+# ==============================================================================
+performance:
+  # Batch span processing
+  batch_span_processor:
+    max_queue_size: 2048
+    schedule_delay_millis: 5000
+    export_timeout_millis: 30000
+    max_export_batch_size: 512
+
+  # Resource limits
+  resource_limits:
+    max_attributes_per_span: 128
+    max_events_per_span: 128
+    max_links_per_span: 128
+    max_attribute_value_length: 1024
+
+# ==============================================================================
+# Tier-Specific Requirements
+# ==============================================================================
+tier_requirements:
+  tier_1:
+    tracing: "optional"
+    metrics: "required"
+    logging: "required"
+    cost_tracking: "required"
+    alerting: "optional"
+
+  tier_2:
+    tracing: "recommended"
+    metrics: "required"
+    logging: "required"
+    cost_tracking: "required"
+    alerting: "required"
+
+  tier_3:
+    tracing: "required"
+    metrics: "required"
+    logging: "required"
+    cost_tracking: "required"
+    alerting: "required"
+    audit_trail: "required"
+
+  tier_4:
+    tracing: "required"
+    metrics: "required"
+    logging: "required"
+    cost_tracking: "required"
+    alerting: "required"
+    audit_trail: "required"
+    human_review_tracking: "required"
+
+# ==============================================================================
+# Notes
+# ==============================================================================
+# For implementation examples, see:
+# - examples/observability/python_integration.py
+# - examples/observability/cost_tracking.py
+# - docs/observability-guide.md
+#
+# For mitigation details, see:
+# - policies/mitigation-catalog.md (MI-004: Observability)
