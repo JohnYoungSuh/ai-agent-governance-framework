@@ -132,7 +132,7 @@ This framework aligns with industry standards including:
 
 - **Issues**: [GitHub Issues](https://github.com/JohnYoungSuh/ai-agent-governance-framework/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/JohnYoungSuh/ai-agent-governance-framework/discussions)
-- **Email**: your-email@example.com
+- **Email**: youngs@suhlabs.com
 
 ---
 
