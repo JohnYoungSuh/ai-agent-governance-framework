@@ -191,7 +191,7 @@ This framework (v2.0) aligns with and incorporates best practices from:
 
 - **Issues**: [GitHub Issues](https://github.com/JohnYoungSuh/ai-agent-governance-framework/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/JohnYoungSuh/ai-agent-governance-framework/discussions)
-- **Email**: your-email@example.com
+- **Email**: youngs@suhlabs.com
 
 ---
 
