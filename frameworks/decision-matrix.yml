@@ -1,0 +1,78 @@
+# Decision Authority Matrix
+# Version: 1.0
+
+decisions:
+  read_code_configs:
+    tier_1: autonomous
+    tier_2: autonomous
+    tier_3: autonomous
+    tier_4: autonomous
+    human_required: false
+    
+  modify_dev_code:
+    tier_1: prohibited
+    tier_2: autonomous
+    tier_3: autonomous
+    tier_4: poc_only
+    human_required: post_review
+    
+  run_dev_tests:
+    tier_1: prohibited
+    tier_2: autonomous
+    tier_3: autonomous
+    tier_4: autonomous
+    human_required: false
+    
+  deploy_staging:
+    tier_1: prohibited
+    tier_2: prohibited
+    tier_3: autonomous
+    tier_4: prohibited
+    human_required: pre_approval
+    
+  deploy_production:
+    tier_1: prohibited
+    tier_2: prohibited
+    tier_3: autonomous
+    tier_4: prohibited
+    human_required: pre_approval_dual_signoff
+    
+  change_architecture:
+    tier_1: prohibited
+    tier_2: prohibited
+    tier_3: prohibited
+    tier_4: propose_only
+    human_required: approval_required
+    
+  modify_security:
+    tier_1: prohibited
+    tier_2: prohibited
+    tier_3: prohibited
+    tier_4: prohibited
+    human_required: always
+    
+  access_customer_data:
+    tier_1: prohibited
+    tier_2: prohibited
+    tier_3: prohibited
+    tier_4: prohibited
+    human_required: always_with_audit
+    
+  delete_production_data:
+    tier_1: prohibited
+    tier_2: prohibited
+    tier_3: prohibited
+    tier_4: prohibited
+    human_required: always_dual_signoff
+
+legend:
+  autonomous: "Can perform without approval"
+  conditional: "Can perform under specific conditions"
+  propose_only: "Can propose but not execute"
+  prohibited: "Cannot perform under any circumstances"
+  poc_only: "Only for proof-of-concept work"
+
+metadata:
+  version: "1.0"
+  last_updated: "2025-10-12"
+  review_frequency: quarterly

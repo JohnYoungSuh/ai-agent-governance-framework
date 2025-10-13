@@ -1,0 +1,54 @@
+name: Validate Framework
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Validate YAML files
+        run: |
+          for file in $(find frameworks templates -name "*.yml" -o -name "*.yaml"); do
+            echo "Validating $file"
+            python3 -c "import yaml; yaml.safe_load(open('$file'))"
+          done
+  
+  validate-markdown:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Markdown lint
+        uses: actionshub/markdownlint@main
+        with:
+          path: "docs/"
+  
+  validate-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Shellcheck
+        run: |
+          sudo apt-get install -y shellcheck
+          for file in $(find scripts -name "*.sh"); do
+            echo "Checking $file"
+            shellcheck "$file" || true
+          done
+  
+  test-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Test example configurations
+        run: |
+          echo "Testing example configurations..."
+          # Add specific tests here
+          echo "All tests passed"

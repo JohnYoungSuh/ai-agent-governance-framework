@@ -1,0 +1,78 @@
+# Approval Workflow Definitions
+# Version: 1.0
+
+workflows:
+  standard_approval:
+    applies_to:
+      - tier_2_development
+    steps:
+      - agent_proposes
+      - human_reviews
+      - decision: [approve, reject, modify]
+      - agent_executes
+      - agent_reports_results
+    timeline: "< 1 hour for routine changes"
+    
+  enhanced_approval:
+    applies_to:
+      - tier_3_operations
+    steps:
+      - agent_proposes
+      - human_reviews
+      - risk_assessment
+      - decision: [approve, reject]
+      - agent_executes
+      - real_time_monitoring
+      - results_validation
+      - post_mortem
+    timeline: "< 4 hours for routine deployments"
+    
+  architectural_approval:
+    applies_to:
+      - tier_4_architecture
+    steps:
+      - agent_researches
+      - draft_proposal
+      - peer_review
+      - stakeholder_review
+      - decision: [approve, table, reject]
+      - if_approved_assign_to_tier_2_3
+    timeline: "1-5 days for major decisions"
+    
+  emergency_override:
+    applies_to:
+      - tier_3_incidents
+    steps:
+      - human_declares_incident
+      - tier_3_agent_activated
+      - runbook_execution_auto_approved
+      - concurrent_logging
+      - post_incident_review_required
+    timeline: "Immediate, review within 24 hours"
+
+approval_types:
+  pre_approval:
+    description: "Human must approve before execution"
+    required_for:
+      - production_deployments
+      - architecture_changes
+      - security_modifications
+      
+  post_review:
+    description: "Human reviews after execution"
+    required_for:
+      - development_code_changes
+      - documentation_updates
+      - test_modifications
+      
+  dual_signoff:
+    description: "Two humans must approve"
+    required_for:
+      - production_data_deletion
+      - major_architecture_changes
+      - vendor_commitments
+
+metadata:
+  version: "1.0"
+  last_updated: "2025-10-12"
+  review_frequency: quarterly

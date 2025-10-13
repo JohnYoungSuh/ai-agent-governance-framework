@@ -1,0 +1,51 @@
+# Agent Configuration Template
+# Copy this file and customize for your agent
+
+agent:
+  name: ""  # Unique agent identifier (e.g., "doc-analyzer-01")
+  tier: 0   # 1, 2, 3, or 4
+  version: "1.0"
+  owner: ""  # Responsible human (email or ID)
+  team: ""   # Organizational unit
+  
+purpose:
+  primary_function: ""  # Main responsibility
+  use_cases:
+    - ""  # List specific use cases
+    
+scope:
+  permitted_systems:
+    - ""  # Systems agent can access
+  data_access_level: ""  # Public, Internal, Confidential
+  deployment_authority: ""  # None, Dev, Staging, Prod
+  budget_allocation:
+    amount: 0
+    currency: "USD"
+    period: "monthly"
+    
+constraints:
+  rate_limits:
+    max_requests_per_hour: 100
+    max_cost_per_day: 10.00
+  working_hours:
+    start: "00:00"
+    end: "23:59"
+    timezone: "UTC"
+  restricted_operations:
+    - ""  # Operations explicitly prohibited
+    
+monitoring:
+  log_level: "INFO"  # DEBUG, INFO, WARN, ERROR
+  metrics_enabled: true
+  alert_email: ""
+  
+compliance:
+  data_residency: ""  # Geographic restrictions
+  retention_policy: "2_years"
+  encryption_required: true
+
+metadata:
+  created_date: ""
+  created_by: ""
+  last_updated: ""
+  review_date: ""

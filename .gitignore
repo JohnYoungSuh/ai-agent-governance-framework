@@ -1,0 +1,37 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Agent runtime data
+agents/*/runtime/
+agents/*/logs/
+*.log
+
+# Cost tracking data (may contain sensitive info)
+reports/cost/*.csv
+reports/cost/*.json
+
+# Backup files
+*.bak
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Credentials and secrets
+secrets/
+credentials.yml
+api-keys.txt

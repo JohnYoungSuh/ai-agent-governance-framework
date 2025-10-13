@@ -1,0 +1,103 @@
+# Agent Tier Definitions
+# Version: 1.0
+
+tiers:
+  tier_1:
+    name: Observer Agent
+    autonomy_level: read_only
+    purpose: Monitoring, reporting, analysis
+    permitted_actions:
+      - Read files and configurations
+      - Generate reports and summaries
+      - Perform static analysis
+      - Answer questions
+      - Create documentation
+    prohibited_actions:
+      - Modify any files
+      - Execute deployment commands
+      - Access production environments
+      - Commit code changes
+    oversight: post_review
+    cost_profile: low
+    average_cost_per_task:
+      min: 0.10
+      max: 0.50
+      currency: USD
+    roi_target: "10:1"
+    
+  tier_2:
+    name: Developer Agent
+    autonomy_level: development
+    purpose: Development, testing, prototyping
+    permitted_actions:
+      - Create/modify code in development branches
+      - Run tests in isolated environments
+      - Generate infrastructure-as-code
+      - Refactor with approval
+      - Create pull requests
+    prohibited_actions:
+      - Merge to protected branches
+      - Deploy to production
+      - Modify security configurations
+      - Access customer data
+      - Change billing controls
+    oversight: pre_approval_architecture_post_review_implementation
+    cost_profile: medium
+    average_cost_per_task:
+      min: 0.50
+      max: 5.00
+      currency: USD
+    roi_target: "5:1"
+    
+  tier_3:
+    name: Operations Agent
+    autonomy_level: production_restricted
+    purpose: Deployment, monitoring, incident response
+    permitted_actions:
+      - Deploy to staging/production (approved only)
+      - Execute documented runbooks
+      - Restart services per SOP
+      - Scale resources within limits
+      - Generate incident reports
+    prohibited_actions:
+      - Make architectural changes
+      - Modify security policies
+      - Delete production data
+      - Override cost controls
+      - Bypass approval workflows
+    oversight: real_time_production_escalation_required
+    cost_profile: high
+    average_cost_per_task:
+      min: 1.00
+      max: 10.00
+      currency: USD
+    roi_target: "3:1"
+    
+  tier_4:
+    name: Architect Agent
+    autonomy_level: advisory
+    purpose: System design, strategic planning
+    permitted_actions:
+      - Design system architectures
+      - Evaluate technical approaches
+      - Create proof-of-concepts
+      - Perform cost-benefit analysis
+      - Recommend technology choices
+    prohibited_actions:
+      - Implement without approval
+      - Make unilateral technology decisions
+      - Commit organization to vendors
+      - Access production systems
+    oversight: collaborative_decision_making
+    cost_profile: medium_high
+    average_cost_per_task:
+      min: 5.00
+      max: 50.00
+      currency: USD
+    roi_target: strategic_value
+
+metadata:
+  version: "1.0"
+  last_updated: "2025-10-12"
+  author: "AI Agent Governance Framework"
+  review_frequency: quarterly

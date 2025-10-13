@@ -1,0 +1,54 @@
+# Task Cost Tracking Template
+
+task:
+  id: ""  # TASK-YYYY-NNN
+  agent: ""
+  tier: 0
+  date: ""  # ISO format: 2025-10-12
+  status: ""  # Completed, Failed, Partial
+  
+cost_breakdown:
+  token_usage:
+    input_tokens: 0
+    output_tokens: 0
+    total_token_cost: 0.00
+    
+  tool_usage:
+    web_searches: 0
+    code_executions: 0
+    file_operations: 0
+    total_tool_cost: 0.00
+    
+  human_time:
+    review_hours: 0.0
+    approval_hours: 0.0
+    correction_hours: 0.0
+    hourly_rate: 75.00
+    total_human_cost: 0.00
+    
+  infrastructure:
+    compute_cost: 0.00
+    storage_cost: 0.00
+    network_cost: 0.00
+    total_infra_cost: 0.00
+    
+  error_cost:
+    failed_attempts: 0
+    rollback_cost: 0.00
+    incident_cost: 0.00
+    total_error_cost: 0.00
+
+totals:
+  total_task_cost: 0.00
+  value_delivered: 0.00  # Time saved × hourly rate
+  roi: "0:1"
+  
+metrics:
+  iterations_required: 0
+  rework_needed: false
+  success_on_first_attempt: true
+  
+learnings:
+  what_worked: ""
+  what_to_improve: ""
+  pattern_identified: ""
