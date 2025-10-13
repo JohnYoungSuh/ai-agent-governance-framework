@@ -311,9 +311,9 @@ Your Framework/
 ## 📞 Emergency Contacts
 
 ```
-Security Incident: security-team@company.com
-Budget Issues: finance-team@company.com
-Governance Questions: governance-team@company.com
+Security Incident: security-team@suhlabs.com
+Budget Issues: finance-team@suhlabs.com
+Governance Questions: governance-team@suhlabs.com
 Technical Issues: [GitHub Issues]
 ```
 

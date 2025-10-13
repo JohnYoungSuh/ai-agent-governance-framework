@@ -1050,12 +1050,12 @@ approval_request:
   primary_approver:
     role: "Database Admin"
     name: "Jane Smith"
-    contact: "jane@company.com"
+    contact: "jane@suhlabs.com"
 
   backup_approver:
     role: "Senior Database Engineer"
     name: "Bob Johnson"
-    contact: "bob@company.com"
+    contact: "bob@suhlabs.com"
     escalation_after: "2 hours"
 
   context:
