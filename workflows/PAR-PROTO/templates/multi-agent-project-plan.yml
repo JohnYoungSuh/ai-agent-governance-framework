@@ -1,0 +1,500 @@
+# Multi-Agent Project Plan Template
+# Version: 1.0
+# Last Updated: 2025-10-14
+
+# =============================================================================
+# PROJECT INFORMATION
+# =============================================================================
+
+project:
+  name: "[Project Name]"
+  id: "[PROJECT-YYYY-NNN]"
+  tier: [1, 2, 3, 4]  # Agent tier level
+  pattern: "multi-agent"  # Options: single-agent, multi-agent
+
+  owner:
+    name: "[Owner Name]"
+    role: "[Role]"
+    email: "[email@domain.com]"
+
+  timeline:
+    start_date: "YYYY-MM-DD"
+    expected_end_date: "YYYY-MM-DD"
+    stage_1_duration: "[X days]"
+    stage_2_duration: "[Y days]"
+
+  budget:
+    total: "$XXX.XX"
+    stage_1: "$XX.XX"
+    stage_2: "$YYY.XX"
+    human_oversight: "$ZZ.ZZ"
+
+# =============================================================================
+# PROBLEM DEFINITION
+# =============================================================================
+
+problem:
+  title: "[Brief problem description]"
+
+  description: |
+    [Detailed explanation of the problem:
+    - What is wrong or needs improvement
+    - Why it matters (business/technical impact)
+    - Current state vs. desired state]
+
+  complexity_assessment:
+    code_complexity: [low, medium, high]
+    documentation_needs: [low, medium, high]
+    stakeholder_count: [number]
+    production_critical: [yes, no]
+
+  success_criteria:
+    - "[Measurable outcome 1]"
+    - "[Measurable outcome 2]"
+    - "[Measurable outcome 3]"
+
+  constraints:
+    budget: "$XXX.XX"
+    timeline: "[Y days/weeks]"
+    dependencies:
+      - "[Dependency 1]"
+      - "[Dependency 2]"
+
+  decision:
+    pattern: "multi-agent"  # Decided to use multi-agent approach
+    rationale: |
+      [Why multi-agent pattern was chosen:
+      - Complexity requires multiple phases
+      - Different skills needed at different stages
+      - Cost optimization opportunity
+      - Quality gates are critical]
+
+# =============================================================================
+# STAGE 1: PROTOTYPE PHASE
+# =============================================================================
+
+stage_1_prototype:
+  agent:
+    type: "[GitHub Copilot / Cursor / Other]"
+    version: "[Version if applicable]"
+    environment: "[VS Code / IDE / CLI]"
+
+  objective: "Rapid exploration and proof-of-concept"
+
+  activities:
+    - activity: "[Activity 1]"
+      description: "[What will be done]"
+      method: "[How it will be done]"
+      estimated_duration: "[X hours]"
+      expected_output: "[Deliverable]"
+
+    - activity: "[Activity 2]"
+      description: "[What will be done]"
+      method: "[How it will be done]"
+      estimated_duration: "[Y hours]"
+      expected_output: "[Deliverable]"
+
+  deliverables:
+    - name: "[Deliverable 1]"
+      type: "[code, documentation, analysis]"
+      location: "[path/to/file]"
+      quality: "[prototype, draft, complete]"
+
+    - name: "[Deliverable 2]"
+      type: "[code, documentation, analysis]"
+      location: "[path/to/file]"
+      quality: "[prototype, draft, complete]"
+
+  success_criteria:
+    - "[Proof of concept demonstrates feasibility]"
+    - "[Core technical challenges identified]"
+    - "[Architecture approach validated]"
+
+  risks:
+    - risk: "[Risk description]"
+      likelihood: [low, medium, high]
+      impact: [low, medium, high]
+      mitigation: "[How to mitigate]"
+
+  estimated_cost: "$XX.XX"
+  estimated_duration: "[X days/hours]"
+
+# =============================================================================
+# QUALITY GATE 1: PROTOTYPE → PRODUCTION
+# =============================================================================
+
+quality_gate_1:
+  name: "Prototype to Production Transition"
+  review_type: "human_review"
+
+  technical_checklist:
+    - item: "Proof of concept works"
+      required: true
+    - item: "Architecture is sound"
+      required: true
+    - item: "No major technical blockers"
+      required: true
+    - item: "Technical debt documented"
+      required: true
+
+  business_checklist:
+    - item: "Stakeholders approve approach"
+      required: true
+    - item: "ROI projection is positive"
+      required: true
+    - item: "Timeline is realistic"
+      required: false
+
+  documentation_checklist:
+    - item: "Architecture notes complete"
+      required: true
+    - item: "Lessons learned captured"
+      required: true
+    - item: "Open questions listed"
+      required: true
+
+  approval:
+    required_approvers:
+      - role: "[Tech Lead]"
+        name: "[Name]"
+        email: "[email]"
+
+    decision_criteria:
+      - "All required checklist items pass"
+      - "No critical blockers"
+      - "Stakeholder alignment achieved"
+
+  handoff_artifacts:
+    - "[path/to/prototype/code]"
+    - "[path/to/architecture/notes]"
+    - "[path/to/lessons/learned]"
+    - "[path/to/open/questions]"
+
+# =============================================================================
+# STAGE 2: PRODUCTION PHASE
+# =============================================================================
+
+stage_2_production:
+  agent:
+    type: "[Claude / GPT-4 / Other]"
+    model: "[sonnet-4.5 / opus-4 / etc]"
+    environment: "[Claude Code CLI / API / etc]"
+
+  objective: "Transform prototype into production-quality deliverable"
+
+  inputs_from_stage_1:
+    - name: "[Input 1]"
+      location: "[path/to/file]"
+      purpose: "[How it will be used]"
+
+    - name: "[Input 2]"
+      location: "[path/to/file]"
+      purpose: "[How it will be used]"
+
+  activities:
+    - activity: "[Activity 1]"
+      description: "[What will be done]"
+      deliverables: ["[output1]", "[output2]"]
+      estimated_duration: "[X hours/days]"
+      quality_standard: "[Specific standards]"
+
+    - activity: "[Activity 2]"
+      description: "[What will be done]"
+      deliverables: ["[output1]"]
+      estimated_duration: "[Y hours/days]"
+      quality_standard: "[Specific standards]"
+
+  deliverables:
+    - name: "[Deliverable 1]"
+      type: "[code, documentation, configuration]"
+      location: "[path/to/file]"
+      quality_target: "[production-ready]"
+      success_criteria:
+        - "[Criterion 1]"
+        - "[Criterion 2]"
+
+    - name: "[Deliverable 2]"
+      type: "[code, documentation, configuration]"
+      location: "[path/to/file]"
+      quality_target: "[production-ready]"
+      success_criteria:
+        - "[Criterion 1]"
+
+  quality_standards:
+    code:
+      style_guide: "[Link to style guide]"
+      test_coverage: ">80%"
+      performance: "[Specific targets]"
+      security: "[Security requirements]"
+
+    documentation:
+      completeness: "100%"
+      accuracy: "Validated by human"
+      audience: "[Primary audience]"
+      format: "Markdown"
+
+  testing_requirements:
+    unit_tests:
+      coverage_target: ">80%"
+      frameworks: ["[pytest / jest / etc]"]
+
+    integration_tests:
+      scenarios: ["[Scenario 1]", "[Scenario 2]"]
+
+    end_to_end_tests:
+      critical_paths: ["[Path 1]", "[Path 2]"]
+
+  estimated_cost: "$YYY.XX"
+  estimated_duration: "[Y days]"
+
+# =============================================================================
+# QUALITY GATE 2: PRODUCTION READINESS
+# =============================================================================
+
+quality_gate_2:
+  name: "Production Readiness Review"
+  review_type: "comprehensive_review"
+
+  code_quality_checklist:
+    - item: "Style guide compliance"
+      required: true
+    - item: "Error handling implemented"
+      required: true
+    - item: "Performance optimized"
+      required: true
+    - item: "Security best practices"
+      required: true
+
+  testing_checklist:
+    - item: "Test coverage ≥80%"
+      required: true
+    - item: "All tests passing"
+      required: true
+    - item: "Manual testing complete"
+      required: true
+
+  documentation_checklist:
+    - item: "README complete"
+      required: true
+    - item: "Technical documentation"
+      required: true
+    - item: "Operational runbook"
+      required: true
+    - item: "User guide"
+      required: false
+
+  deployment_checklist:
+    - item: "Configuration templates"
+      required: true
+    - item: "Deployment automation"
+      required: true
+    - item: "Monitoring configured"
+      required: true
+    - item: "Rollback plan documented"
+      required: true
+
+  approval:
+    required_approvers:
+      - role: "[Product Owner]"
+        name: "[Name]"
+        email: "[email]"
+
+      - role: "[Tech Lead]"
+        name: "[Name]"
+        email: "[email]"
+
+      - role: "[Security Team]"
+        name: "[Name]"
+        email: "[email]"
+        required_if: "production_deployment"
+
+  decision_criteria:
+    - "All required checklist items pass"
+    - "No critical or high severity issues"
+    - "Stakeholder approval obtained"
+    - "Deployment plan approved"
+
+# =============================================================================
+# RESULTS & OUTPUT
+# =============================================================================
+
+results:
+  deliverables:
+    - artifact: "[Artifact 1]"
+      location: "[path/to/artifact]"
+      status: "[planned, in_progress, complete]"
+
+    - artifact: "[Artifact 2]"
+      location: "[path/to/artifact]"
+      status: "[planned, in_progress, complete]"
+
+  success_metrics:
+    functional:
+      - metric: "[Metric 1]"
+        target: "[Target value]"
+        actual: "[Actual value]"
+        status: "[met, not_met, in_progress]"
+
+    quality:
+      - metric: "Code quality"
+        target: "A grade"
+        actual: "[TBD]"
+
+      - metric: "Test coverage"
+        target: ">80%"
+        actual: "[TBD]"
+
+      - metric: "Documentation completeness"
+        target: "100%"
+        actual: "[TBD]"
+
+  cost_analysis:
+    stage_1_actual: "$XX.XX"
+    stage_2_actual: "$YYY.XX"
+    human_oversight_actual: "$ZZ.XX"
+    total_actual: "$TOTAL.XX"
+    variance_from_budget: "[+/- $X.XX]"
+
+  roi_analysis:
+    investment: "$TOTAL.XX"
+    returns:
+      time_saved: "[X hours × $Y/hr = $Z]"
+      faster_delivery: "[X days earlier = $Y value]"
+      higher_quality: "[Fewer bugs = $Z value]"
+      total: "$RETURNS.XX"
+    roi_ratio: "[N:1]"
+    payback_period: "[Time period]"
+
+  lessons_learned:
+    what_worked_well:
+      - "[Success 1]"
+      - "[Success 2]"
+
+    what_could_improve:
+      - "[Improvement area 1]"
+      - "[Improvement area 2]"
+
+    recommendations_for_future:
+      - "[Recommendation 1]"
+      - "[Recommendation 2]"
+
+# =============================================================================
+# RISK MANAGEMENT
+# =============================================================================
+
+risks:
+  technical:
+    - risk: "[Risk description]"
+      likelihood: [1-5]
+      impact: [1-5]
+      score: [likelihood × impact]
+      mitigation: "[How to mitigate]"
+      owner: "[Name]"
+      status: "[open, mitigated, accepted]"
+
+  timeline:
+    - risk: "[Risk description]"
+      likelihood: [1-5]
+      impact: [1-5]
+      score: [likelihood × impact]
+      mitigation: "[How to mitigate]"
+      owner: "[Name]"
+      status: "[open, mitigated, accepted]"
+
+  cost:
+    - risk: "[Risk description]"
+      likelihood: [1-5]
+      impact: [1-5]
+      score: [likelihood × impact]
+      mitigation: "[How to mitigate]"
+      owner: "[Name]"
+      status: "[open, mitigated, accepted]"
+
+# =============================================================================
+# STAKEHOLDER COMMUNICATION
+# =============================================================================
+
+stakeholders:
+  - name: "[Stakeholder 1]"
+    role: "[Role]"
+    interest: "[high, medium, low]"
+    influence: "[high, medium, low]"
+    communication_frequency: "[daily, weekly, milestone-based]"
+    contact: "[email@domain.com]"
+
+  - name: "[Stakeholder 2]"
+    role: "[Role]"
+    interest: "[high, medium, low]"
+    influence: "[high, medium, low]"
+    communication_frequency: "[weekly]"
+    contact: "[email@domain.com]"
+
+communication_plan:
+  status_updates:
+    frequency: "[daily, weekly]"
+    format: "[email, slack, meeting]"
+    content:
+      - "Progress against plan"
+      - "Blockers and risks"
+      - "Next steps"
+      - "Budget status"
+
+  milestone_reviews:
+    - milestone: "Quality Gate 1"
+      attendees: ["[Stakeholder 1]", "[Tech Lead]"]
+      format: "[demo, presentation, document review]"
+
+    - milestone: "Quality Gate 2"
+      attendees: ["[All stakeholders]"]
+      format: "[demo, presentation, document review]"
+
+# =============================================================================
+# GOVERNANCE & COMPLIANCE
+# =============================================================================
+
+governance:
+  tier_level: [1, 2, 3, 4]
+
+  approval_requirements:
+    stage_1_kickoff: "[Role that approves]"
+    quality_gate_1: "[Roles that approve]"
+    stage_2_kickoff: "[Role that approves]"
+    quality_gate_2: "[Roles that approve]"
+    production_deployment: "[Roles that approve]"
+
+  audit_trail:
+    - "All decisions documented"
+    - "Quality gate reviews archived"
+    - "Cost tracking maintained"
+    - "Lessons learned captured"
+
+  compliance_requirements:
+    - requirement: "[Compliance requirement 1]"
+      applicable: [yes, no]
+      evidence: "[How compliance is demonstrated]"
+
+# =============================================================================
+# VERSION HISTORY
+# =============================================================================
+
+version_history:
+  - version: "1.0"
+    date: "YYYY-MM-DD"
+    author: "[Name]"
+    changes: "Initial project plan"
+
+  - version: "1.1"
+    date: "YYYY-MM-DD"
+    author: "[Name]"
+    changes: "[Description of changes]"
+
+# =============================================================================
+# NOTES
+# =============================================================================
+
+notes: |
+  [Any additional notes, context, or observations that don't fit elsewhere]
+
+# =============================================================================
+# END OF TEMPLATE
+# =============================================================================

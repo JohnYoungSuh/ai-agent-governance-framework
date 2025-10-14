@@ -15,13 +15,14 @@ This framework enables organizations to:
 
 ## 🆕 What's New in v2.0
 
-Version 2.0 introduces major security and risk management enhancements:
+Version 2.0 introduces major security, risk management, and multi-agent workflow enhancements:
 
 - **Risk Catalog**: 18 AI-specific risks with scoring and detection methods
 - **Mitigation Catalog**: 21 implementation-ready controls with code samples
 - **Threat Modeling**: STRIDE-based assessment tool (required for Tier 3/4)
 - **Observability Framework**: OpenTelemetry configuration for comprehensive monitoring
 - **Enhanced PAR Cycle**: Security and observability built into workflow
+- **Multi-Agent Workflows**: PAR-PROTO pattern for Copilot → Claude development
 - **Quick Reference Guide**: Printable daily operations reference
 
 **See [ENHANCEMENTS.md](ENHANCEMENTS.md) for complete details.**
@@ -41,6 +42,11 @@ Version 2.0 introduces major security and risk management enhancements:
 - **[Risk Catalog](policies/risk-catalog.md)** ⭐ - 18 AI-specific risks with scoring
 - **[Mitigation Catalog](policies/mitigation-catalog.md)** ⭐ - 21 controls with implementation code
 - **[Threat Modeling Guide](workflows/threat-modeling/guide.md)** ⭐ - STRIDE-based security assessment
+
+### Multi-Agent Workflows (NEW in v2.0)
+- **[PAR-PROTO Workflow](workflows/PAR-PROTO/README.md)** ⭐ - Multi-agent development patterns (Copilot → Claude → Gemini)
+- **[Jira Integration](workflows/PAR-PROTO/integrations/jira-integration.md)** - Issue tracking and approvals
+- **[Slack Integration](workflows/PAR-PROTO/integrations/slack-integration.md)** - Discussion tracking
 
 ## 🏗️ Project Structure
 
@@ -63,7 +69,11 @@ ai-agent-governance-framework/
 │   │   ├── scripts/
 │   │   │   └── run-threat-model.sh  # Interactive tool
 │   │   └── reports/              # Generated threat models
-│   └── PAR-PROTO/                # Prototyping workflow
+│   └── PAR-PROTO/                # ⭐ Multi-agent workflows (NEW)
+│       ├── README.md             # Two-agent pattern (Copilot → Claude)
+│       ├── three-agent-workflow.md  # Three-agent with Gemini testing
+│       ├── integrations/         # Jira & Slack integration guides
+│       └── templates/            # Project templates
 ├── frameworks/                    # Framework definitions
 │   ├── observability-config.yml   # ⭐ OpenTelemetry config (NEW)
 │   ├── agent-tiers.yml            # Tier definitions
