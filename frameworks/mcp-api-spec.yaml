@@ -1,0 +1,13 @@
+/siem/events:
+  get:
+    description: "Query SIEM events by control_id or date range"
+    parameters:
+      - name: control_id
+        in: query
+        schema:
+          type: string
+      - name: start
+        in: query
+        schema:
+          type: string
+          format: date-time

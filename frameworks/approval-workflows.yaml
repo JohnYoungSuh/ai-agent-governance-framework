@@ -1,0 +1,32 @@
+approval_workflows:
+  audit_trail_modification:
+    description: Multi-layer approval for audit-trail changes
+    triggers:
+      - event: audit_trail.record_modification_requested
+      - event: siem.alert
+    steps:
+      - name: technical_owner_approval
+        role: Technical Owner
+        actions:
+          - review_change_request
+          - sign_with_pki
+      - name: compliance_officer_approval
+        role: Compliance Officer
+        actions:
+          - review_change_request
+          - sign_with_pki
+      - name: governance_board_approval
+        role: Governance Board
+        actions:
+          - final_review
+          - sign_with_pki
+    requirements:
+      pki_signatures_required: true
+      immutable_store: true
+      append_only: true
+    notifications:
+      on_completion:
+        - channel: jira
+          message: >
+            "Audit trail modification approved. CR ID: {{ change_request.id }}. 
+            Signatures: {{ approvals.signatures | join(', ') }}"

@@ -1,0 +1,74 @@
+# frameworks/observability-config.yml
+
+ingestion:
+  audit_trail:
+    type: s3
+    bucket: audit-trails-bucket
+    prefix: "audit-trails/"
+    polling_interval: 60s
+    siem_event_id_field: siem_event_id
+
+  jira_events:
+    type: webhook
+    path: "/webhooks/jira"
+    secret_token_env_var: JIRA_WEBHOOK_SECRET
+    field_mappings:
+      cr_id: jira.referenceKey
+      approver_role: jira.fields.approverRole
+      budget_tokens: jira.fields.budgetTokens
+      controls: jira.fields.impactedControls
+      timestamp: jira.timestamp
+      siem_event_id: event.id
+      payload: jira
+
+  aws_secrets_manager:
+    type: cloudtrail
+    region: us-west-2
+    trail_name: aiops-secrets-trail
+    event_names:
+      - GetSecretValue
+      - PutSecretValue
+    field_mappings:
+      secret_name: detail.requestParameters.name
+      action: detail.eventName
+      timestamp: detail.eventTime
+      actor: detail.userIdentity.arn
+      siem_event_id: detail.eventID
+      payload: detail
+
+siem:
+  connector:
+    type: elasticsearch
+    hosts:
+      - "https://es-cluster.example.com:9200"
+    index: "aiops-audit-events"
+    authentication:
+      method: api_key
+      api_key_env_var: ES_API_KEY
+    mapping:
+      siem_event_id: metadata.siem_event_id
+      timestamp: metadata.timestamp
+      source: metadata.log_source
+      payload: metadata.payload
+
+retention:
+  hot_storage_days: 365
+  cold_storage_days: 1095
+
+alerts:
+  missing_audit_entries:
+    description: "Detect missing or out-of-order audit entries for a control"
+    query: |
+      source:aiops-audit-events
+      | sort timestamp asc
+      | stats count() by control_id
+      | where count() < expected_count
+    severity: high
+
+  budget_overrun:
+    description: "Detect AI OPS Agent exceeding allocated budget_tokens"
+    query: |
+      source:aiops-audit-events
+      | where event_type="execute_change"
+      | where payload.jira_reference.budget_tokens > payload.runtime.tokens_used
+    severity: critical

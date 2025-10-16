@@ -1,0 +1,27 @@
+{
+  "control_id": "MI-001",
+  "title": "Data Leakage Prevention",
+  "mapped_risks": ["R-003", "R-007"],
+  "description": "Ensure sensitive data is not exposed in prompts, logs, or outputs.",
+  "implementation": {
+    "code_reference": "policies/mitigation-catalog.md#MI-001",
+    "scripts": ["scripts/compliance-check.sh"]
+  },
+  "evidence": {
+    "artifact_type": "compliance_report",
+    "location": "evidence/MI-001/2025-10-15.json",
+    "hash": "sha256:abc123..."
+  },
+  "owner": {
+    "role": "Security Architect",
+    "name": "TBD"
+  },
+  "status": "enforced",
+  "last_reviewed": "2025-10-15",
+  "residual_risk": {
+    "level": "low",
+    "accepted_by": "CISO",
+    "date": "2025-10-15"
+  }
+}
+

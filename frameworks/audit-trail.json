@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Audit Trail Entry",
+  "type": "object",
+  "properties": {
+    "audit_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "actor": { "type": "string" },
+    "action": { "type": "string" },
+    "workflow_step": { "type": "string" },
+    "jira_reference": {
+      "type": "object",
+      "properties": {
+        "cr_id": { "type": "string" },
+        "approver_role": { "type": "string" },
+        "budget_tokens": { "type": "integer" },
+        "controls": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["cr_id", "approver_role", "controls"]
+    },
+    "inputs": { "type": "object" },
+    "outputs": { "type": "object" },
+    "policy_controls_checked": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "compliance_result": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "evidence_hash": { "type": "string" },
+    "auditor_agent": { "type": "string" }
+  },
+  "required": [
+    "audit_id", "timestamp", "actor", "action",
+    "workflow_step", "policy_controls_checked",
+    "compliance_result", "evidence_hash", "auditor_agent"
+  ]
+}
+

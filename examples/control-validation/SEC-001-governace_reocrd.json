@@ -1,0 +1,27 @@
+{
+  "control_id": "SEC-001",
+  "title": "Credential Lifecycle Management",
+  "mapped_risks": ["R-005", "R-011"],
+  "description": "All credentials must be checked out and checked in via AWS Secrets Manager with rotation enforced.",
+  "implementation": {
+    "code_reference": "policies/mitigation-catalog.md#SEC-001",
+    "scripts": ["scripts/ops-agent-secrets-checkout.py"],
+    "runtime_snippet": "examples/control-validation/SEC-001-aws-secrets-manager.md"
+  },
+  "evidence": {
+    "artifact_type": "audit_log",
+    "location": "evidence/SEC-001/2025-10-15.json",
+    "hash": "sha256:MISSING"
+  },
+  "owner": {
+    "role": "Security Architect",
+    "name": "Young"
+  },
+  "status": "enforced",
+  "last_reviewed": "2025-10-15",
+  "residual_risk": {
+    "level": "low",
+    "accepted_by": "CISO",
+    "date": "2025-10-15"
+  }
+}

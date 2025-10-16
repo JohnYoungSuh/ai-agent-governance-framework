@@ -1,0 +1,18 @@
+{
+  "audit_id": "a7f3c2d0-9b12-4f8a-8c3e-1a2b3c4d5e6f",
+  "timestamp": "2025-10-15T11:45:00Z",
+  "actor": "customer-support-bot",
+  "action": "send_response",
+  "workflow_step": "Tier3/Operations",
+  "inputs": {
+    "user_query": "My email is john@example.com"
+  },
+  "outputs": {
+    "sanitized_query": "My email is <EMAIL_ADDRESS>"
+  },
+  "policy_controls_checked": ["MI-001"],
+  "compliance_result": "pass",
+  "evidence_hash": "sha256:9f8e7d6c5b4a321...",
+  "auditor_agent": "AUD-001"
+}
+

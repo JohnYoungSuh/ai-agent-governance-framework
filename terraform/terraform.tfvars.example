@@ -1,0 +1,81 @@
+# Example Terraform Variables Configuration
+# Copy this file to terraform.tfvars and update with your values
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Agent Configuration
+agent_name  = "ai-ops-agent"
+agent_tier  = "tier3-operations" # tier1-observer, tier2-developer, tier3-operations, tier4-architect
+environment = "production"       # dev, staging, production
+
+# GitHub Configuration
+github_organization = "suhlabs"
+github_repository   = "my-infrastructure-repo"
+github_token        = "" # Set via environment variable: TF_VAR_github_token
+github_workflow_file = "ai-ops-agent.yml"
+
+# LLM Configuration (MI-010: Version Pinning)
+llm_model_provider = "anthropic"                  # anthropic, openai, bedrock
+llm_model_version  = "claude-sonnet-4-5-20250929" # Pinned version
+
+# Cost Management (MI-009, MI-021)
+daily_cost_budget   = 100.0  # USD
+monthly_cost_budget = 2000.0 # USD
+
+# Governance Controls (MI-007)
+human_review_percentage = 0.25 # 25% for Tier 3
+
+# Feature Toggles
+enable_audit_trail   = true
+enable_observability = true
+
+# Security Controls (MI-001, MI-002, MI-003)
+enable_pii_redaction              = true
+enable_secrets_scanning           = true
+enable_prompt_injection_detection = true
+
+# VPC Configuration (optional for MI-008 sandboxing)
+# vpc_id = "vpc-xxxxx"
+
+# Notification Configuration
+slack_webhook_url = "" # Set via environment variable: TF_VAR_slack_webhook_url
+jira_api_url      = "" # e.g., https://your-domain.atlassian.net
+
+# Tier-Specific Permissions (MI-020)
+allowed_actions = [
+  "read_data",
+  "modify_dev",
+  "deploy_staging",
+  "deploy_prod"
+]
+
+# Compliance Configuration (MI-018)
+compliance_regulations = [
+  "GDPR",
+  "SOX",
+  "EU_AI_ACT"
+]
+
+# Risk Controls Required (MI-001 to MI-021)
+risk_controls_required = [
+  "MI-001", # Data Leakage Prevention
+  "MI-002", # Input Filtering
+  "MI-003", # Secrets Management
+  "MI-004", # Observability
+  "MI-005", # Rate Limiting
+  "MI-006", # Access Controls
+  "MI-007", # Human Review
+  "MI-009", # Cost Monitoring
+  "MI-019", # Audit Trails
+  "MI-020", # Tier Enforcement
+  "MI-021"  # Budget Limits
+]
+
+# Additional Tags
+tags = {
+  Environment = "production"
+  Team        = "ai-ops"
+  CostCenter  = "engineering"
+  Project     = "ai-agent-governance"
+}

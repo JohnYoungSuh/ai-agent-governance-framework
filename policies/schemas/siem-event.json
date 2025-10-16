@@ -1,0 +1,18 @@
+{
+  "siem_event_id": "3c9f2a1e-7d45-4f8b-9c2a-8a1b2c3d4e5f",
+  "timestamp": "2025-10-15T11:55:00Z",
+  "source": "secrets-manager",
+  "payload": {
+    "action": "GetSecretValue",
+    "secret_name": "prod/db/password",
+    "actor": "ai-ops-agent-01",
+    "lease_id": "lease-xyz-123",
+    "expiry": "2025-10-15T12:05:00Z",
+    "jira_reference": {
+      "cr_id": "CR-2025-1042",
+      "approver_role": "Change Manager",
+      "controls": ["SEC-001"]
+    }
+  }
+}
+
