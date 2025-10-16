@@ -92,6 +92,10 @@ ai-agent-governance-framework/
 │   ├── setup-agent.sh             # New agent setup
 │   ├── cost-report.sh             # Generate cost reports
 │   └── compliance-check.sh        # Run compliance checks
+├── terraform/                     # ⭐ Infrastructure as Code (NEW)
+│   ├── README.md                  # AWS deployment guide
+│   ├── main.tf                    # Terraform configuration
+│   └── lambda/                    # Lambda functions
 └── ENHANCEMENTS.md                # ⭐ v2.0 what's new (NEW)
 ```
 
@@ -152,6 +156,18 @@ cp frameworks/observability-config.yml \
 # View metrics (if observability configured)
 # http://localhost:9090/metrics
 ```
+
+## 🚀 Deployment Options
+
+### Manual Deployment
+Follow the Quick Start guide above for local/manual agent deployment.
+
+### Infrastructure as Code (Terraform)
+For production deployments with full governance controls, see **[Terraform README](terraform/README.md)**:
+- AWS infrastructure with CloudWatch, DynamoDB, S3
+- All 21 mitigation controls implemented
+- GitHub Actions integration
+- Estimated cost: $50-$575/month
 
 ## 📋 Agent Tier Overview
 
