@@ -1,17 +1,19 @@
 # AI Agent Risk Catalog v2.0
 
 > Comprehensive catalog of 18 AI-specific risks for agent governance
+> **Aligned to NIST 800-53 Rev 5 Risk Assessment (RA) controls**
 
 ## Overview
 
-This catalog identifies and categorizes risks specific to AI agent operations. Each risk includes:
+This catalog identifies and categorizes risks specific to AI agent operations per NIST RA-3 (Risk Assessment). Each risk includes:
 - **Risk ID**: Unique identifier (RI-XXX)
+- **NIST Control**: Applicable NIST 800-53 control family
 - **Severity**: Critical, High, Medium, Low
 - **Likelihood**: Probability of occurrence (1-5)
 - **Impact**: Consequence if realized (1-5)
 - **Risk Score**: Likelihood × Impact
 - **Applicable Tiers**: Which agent tiers are affected
-- **Related Mitigations**: Controls to address the risk
+- **Related Mitigations**: Controls to address the risk (see `control-mappings.md`)
 
 ## Risk Scoring Matrix
 
@@ -30,6 +32,7 @@ Priority Levels:
 
 ### RI-001: Hallucination & False Information Generation
 
+**NIST Controls**: SI-7-AI-1, SI-7-AI-2, RA-9-AI-1 | **CCI**: CCI-AI-009, CCI-AI-010, CCI-AI-001
 **Severity**: 🔴 Critical
 **Likelihood**: 5 (Very High)
 **Impact**: 5 (Severe)
@@ -46,6 +49,7 @@ Priority Levels:
 **Applicable Tiers**: All (1-4)
 
 **Related Mitigations**: MI-013 (Citations), MI-015 (LLM-as-Judge), MI-007 (Human Review)
+**NIST Mitigations**: SI-7-AI-1 (Output Validation), SI-7-AI-2 (LLM-as-Judge), AC-6-AI-2 (Human Review)
 
 **Detection Methods**:
 - Output validation against known sources
@@ -57,6 +61,7 @@ Priority Levels:
 
 ### RI-014: Prompt Injection & Manipulation
 
+**NIST Controls**: SI-10, RA-9-AI-2, AC-6 | **CCI**: CCI-002754, CCI-AI-002, CCI-002220
 **Severity**: 🔴 Critical
 **Likelihood**: 4 (High)
 **Impact**: 5 (Severe)
@@ -73,6 +78,7 @@ Priority Levels:
 **Applicable Tiers**: All (1-4), especially Tier 3-4 with production access
 
 **Related Mitigations**: MI-002 (Input Filtering), MI-017 (AI Firewall), MI-008 (Sandboxing)
+**NIST Mitigations**: SI-10 (Input Validation), RA-9-AI-2 (Prompt Injection Risk Assessment), AC-6 (Least Privilege)
 
 **Detection Methods**:
 - Pattern matching for injection keywords
@@ -84,6 +90,7 @@ Priority Levels:
 
 ### RI-015: Data Leakage to Hosted LLM Providers
 
+**NIST Controls**: SC-4-AI-1, IA-5(7), SC-28 | **CCI**: CCI-AI-003, CCI-004062, CCI-001199
 **Severity**: 🔴 Critical
 **Likelihood**: 5 (Very High)
 **Impact**: 5 (Severe)
@@ -100,6 +107,7 @@ Priority Levels:
 **Applicable Tiers**: All (1-4)
 
 **Related Mitigations**: MI-001 (Data Leakage Prevention), MI-003 (Secrets Management), MI-011 (On-Premise LLM)
+**NIST Mitigations**: SC-4-AI-1 (Data Leakage Prevention), IA-5(7) (No Embedded Secrets), SC-4 (Information Isolation)
 
 **Detection Methods**:
 - PII detection in outbound requests
@@ -111,6 +119,7 @@ Priority Levels:
 
 ### RI-018: Runaway Cost & Budget Overruns
 
+**NIST Controls**: SA-15-AI-1, CA-7-AI-1, AU-2 | **CCI**: CCI-AI-013, CCI-AI-012, CCI-000130
 **Severity**: 🔴 Critical (Financial Impact)
 **Likelihood**: 4 (High)
 **Impact**: 4 (Major)
@@ -127,6 +136,7 @@ Priority Levels:
 **Applicable Tiers**: All (1-4)
 
 **Related Mitigations**: MI-009 (Cost Monitoring), MI-021 (Budget Limits), MI-005 (Rate Limiting)
+**NIST Mitigations**: SA-15-AI-1 (Cost and Budget Controls), CA-7-AI-1 (Performance Monitoring), AU-2 (Cost Event Logging)
 
 **Detection Methods**:
 - Real-time cost tracking dashboards
