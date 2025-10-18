@@ -37,6 +37,18 @@ variable "tags" {
   default     = {}
 }
 
+variable "jira_cr_id" {
+  description = "Jira Change Request ID for audit correlation"
+  type        = string
+  default     = ""
+}
+
+variable "audit_id" {
+  description = "Audit trail ID for correlation"
+  type        = string
+  default     = ""
+}
+
 # Secrets Manager secrets
 resource "aws_secretsmanager_secret" "agent_secrets" {
   for_each = var.secrets
@@ -48,12 +60,14 @@ resource "aws_secretsmanager_secret" "agent_secrets" {
   tags = merge(
     var.tags,
     {
-      Name       = "${var.agent_id}/${each.key}"
-      AgentID    = var.agent_id
-      AgentTier  = var.agent_tier
-      ControlID  = join(",", var.control_id)
-      ManagedBy  = "Terraform"
-      Framework  = "AI-Agent-Governance-v2.0"
+      Name          = "${var.agent_id}/${each.key}"
+      AgentID       = var.agent_id
+      AgentTier     = var.agent_tier
+      control_id    = join(",", var.control_id)
+      ManagedBy     = "Terraform"
+      Framework     = "AI-Agent-Governance-v2.1"
+      jira_cr_id    = var.jira_cr_id
+      audit_id      = var.audit_id
     }
   )
 }
@@ -144,5 +158,14 @@ output "audit_metadata" {
     resources_count  = length(aws_secretsmanager_secret.agent_secrets)
     kms_key_id       = var.kms_key_id
     created_at       = timestamp()
+    jira_reference   = {
+      cr_id        = var.jira_cr_id
+      audit_id     = var.audit_id
+    }
+    compliance       = {
+      controls     = var.control_id
+      agent_tier   = var.agent_tier
+      agent_id     = var.agent_id
+    }
   }
 }
