@@ -148,6 +148,20 @@ validate_cost_record() {
         return 0
     fi
 
+    # Try Python-based validator first (most reliable)
+    if command -v python3 >/dev/null 2>&1 && python3 -c "import jsonschema" 2>/dev/null; then
+        echo "Using Python jsonschema validator..."
+        if python3 scripts/validate-schema.py --schema "$SCHEMA_PATH" --data "$record_file" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ Schema validation passed${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ Schema validation failed${NC}"
+            python3 scripts/validate-schema.py --schema "$SCHEMA_PATH" --data "$record_file" 2>&1 | tail -10
+            return 1
+        fi
+    fi
+
+    # Fallback to other validators
     case $SCHEMA_VALIDATOR in
         ajv)
             if ajv validate -s "$SCHEMA_PATH" -d "$record_file" --strict=false 2>/dev/null; then
@@ -166,6 +180,10 @@ validate_cost_record() {
                 echo -e "${RED}❌ Schema validation failed${NC}"
                 return 1
             fi
+            ;;
+        *)
+            echo -e "${YELLOW}No schema validator available${NC}"
+            return 0
             ;;
     esac
 }

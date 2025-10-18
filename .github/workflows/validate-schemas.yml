@@ -1,0 +1,102 @@
+name: Validate Schemas (G-01)
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'policies/schemas/**'
+      - 'test/example-*.json'
+      - '.github/workflows/validate-schemas.yml'
+  pull_request:
+    paths:
+      - 'policies/schemas/**'
+      - 'test/example-*.json'
+
+jobs:
+  validate-schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install JSON Schema validator
+        run: |
+          pip install jsonschema
+
+      - name: Validate SIEM Event Schema
+        run: |
+          python3 -c "
+          import json
+          import jsonschema
+
+          # Load schema
+          with open('policies/schemas/siem-event.json') as f:
+              schema = json.load(f)
+
+          # Validate schema itself
+          jsonschema.Draft7Validator.check_schema(schema)
+
+          # Validate example
+          with open('test/example-siem-event.json') as f:
+              example = json.load(f)
+
+          jsonschema.validate(instance=example, schema=schema)
+          print('✅ SIEM event schema validation passed')
+          "
+
+      - name: Validate Audit Trail Schema
+        run: |
+          python3 -c "
+          import json
+          import jsonschema
+
+          # Load schema
+          with open('policies/schemas/audit-trail.json') as f:
+              schema = json.load(f)
+
+          # Validate schema itself
+          jsonschema.Draft7Validator.check_schema(schema)
+
+          # Validate example
+          with open('test/example-audit-trail.json') as f:
+              example = json.load(f)
+
+          jsonschema.validate(instance=example, schema=schema)
+          print('✅ Audit trail schema validation passed')
+          "
+
+      - name: Validate Cost Record Schema
+        run: |
+          python3 -c "
+          import json
+          import jsonschema
+
+          # Load schema
+          with open('policies/schemas/agent-cost-record.json') as f:
+              schema = json.load(f)
+
+          # Validate schema itself
+          jsonschema.Draft7Validator.check_schema(schema)
+
+          # Validate example
+          with open('test/example-cost-record.json') as f:
+              example = json.load(f)
+
+          jsonschema.validate(instance=example, schema=schema)
+          print('✅ Cost record schema validation passed')
+          "
+
+      - name: Schema compliance report
+        run: |
+          echo "📊 Schema Validation Report"
+          echo "=========================="
+          echo "Control: G-01 (Schema Compliance)"
+          echo "Schemas validated: 3"
+          echo "  - siem-event.json"
+          echo "  - audit-trail.json"
+          echo "  - agent-cost-record.json"
+          echo "Status: ✅ PASSED"

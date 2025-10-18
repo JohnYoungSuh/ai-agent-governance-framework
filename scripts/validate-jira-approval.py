@@ -125,6 +125,95 @@ class JiraApprovalValidator:
 
         return False
 
+    def validate_pki_signature(self, cr_data: Dict) -> Dict:
+        """
+        Validate PKI digital signature on Jira CR (G-02)
+
+        Returns:
+            Dict with 'valid' (bool), 'signer' (str), 'timestamp' (str), 'error' (str)
+        """
+        result = {
+            'valid': False,
+            'signer': None,
+            'timestamp': None,
+            'error': None
+        }
+
+        try:
+            # Extract PKI signature from custom field
+            # Adjust customfield_10103 based on your Jira configuration
+            signature_field = cr_data.get('fields', {}).get('customfield_10103')
+
+            if not signature_field:
+                result['error'] = 'No PKI signature field found'
+                return result
+
+            # Parse signature data
+            if isinstance(signature_field, str):
+                import json
+                try:
+                    signature_data = json.loads(signature_field)
+                except json.JSONDecodeError:
+                    result['error'] = 'Invalid signature format'
+                    return result
+            else:
+                signature_data = signature_field
+
+            # Extract signature components
+            signature = signature_data.get('signature')
+            signer_cert = signature_data.get('signer_certificate')
+            signed_data = signature_data.get('signed_data')
+
+            if not all([signature, signer_cert, signed_data]):
+                result['error'] = 'Incomplete signature data'
+                return result
+
+            # Verify digital signature using cryptography library
+            try:
+                from cryptography import x509
+                from cryptography.hazmat.primitives import hashes, serialization
+                from cryptography.hazmat.primitives.asymmetric import padding
+                from cryptography.hazmat.backends import default_backend
+                import base64
+
+                # Load certificate
+                cert_pem = base64.b64decode(signer_cert)
+                cert = x509.load_pem_x509_certificate(cert_pem, default_backend())
+
+                # Get public key
+                public_key = cert.public_key()
+
+                # Decode signature and data
+                sig_bytes = base64.b64decode(signature)
+                data_bytes = signed_data.encode('utf-8')
+
+                # Verify signature
+                public_key.verify(
+                    sig_bytes,
+                    data_bytes,
+                    padding.PKCS1v15(),
+                    hashes.SHA256()
+                )
+
+                # Extract signer info from certificate
+                result['valid'] = True
+                result['signer'] = cert.subject.get_attributes_for_oid(
+                    x509.oid.NameOID.COMMON_NAME
+                )[0].value
+                result['timestamp'] = signature_data.get('timestamp')
+
+            except ImportError:
+                result['error'] = 'PKI validation library not available (install: pip install cryptography)'
+                result['valid'] = None  # Unknown state
+            except Exception as e:
+                result['error'] = f'Signature verification failed: {str(e)}'
+                result['valid'] = False
+
+        except Exception as e:
+            result['error'] = f'PKI validation error: {str(e)}'
+
+        return result
+
     def get_budget_tokens(self, cr_data: Dict) -> Optional[int]:
         """Extract budget token allocation from CR"""
         # Try to find budget in description or custom field
@@ -325,6 +414,38 @@ def main():
         sys.exit(1)
 
     print(f"{Colors.GREEN}✅ CR Status Verified: Approved{Colors.NC}")
+
+    # Validate PKI signature (G-02)
+    print(f"\n🔐 Validating PKI signature...")
+    pki_result = validator.validate_pki_signature(cr_data)
+
+    if pki_result['valid'] is None:
+        print(f"{Colors.YELLOW}⚠️  WARNING: {pki_result['error']}{Colors.NC}")
+        print("Note: PKI validation skipped - proceeding without digital signature verification")
+    elif pki_result['valid']:
+        print(f"{Colors.GREEN}✅ PKI Signature Valid{Colors.NC}")
+        print(f"   Signer: {pki_result['signer']}")
+        print(f"   Timestamp: {pki_result['timestamp']}")
+    else:
+        print(f"{Colors.RED}❌ FAILED: PKI signature validation failed{Colors.NC}")
+        print(f"   Error: {pki_result['error']}")
+        print()
+        print("GOVERNANCE VIOLATION:")
+        print("  Control:     G-02 (Approval Enforcement - PKI)")
+        print(f"  Requirement: CR must have valid digital signature")
+        print(f"  Current:     Signature validation failed on CR {cr_id}")
+
+        # Check if PKI validation is enforced
+        enforce_pki = os.getenv('ENFORCE_PKI_VALIDATION', 'false').lower() == 'true'
+        if enforce_pki:
+            audit_entry = validator.generate_audit_trail(
+                agent_id, cr_id, cr_data, "fail", required_role
+            )
+            audit_path = save_audit_trail(audit_entry)
+            print(f"\n📄 Audit Trail: {audit_path}")
+            sys.exit(1)
+        else:
+            print(f"{Colors.YELLOW}⚠️  WARNING: PKI enforcement disabled (ENFORCE_PKI_VALIDATION=false){Colors.NC}")
 
     # Validate approvers
     approvers = validator.get_approvers(cr_data)

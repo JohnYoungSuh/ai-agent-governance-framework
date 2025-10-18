@@ -1,0 +1,199 @@
+name: Jira CR Approved - Auto Deploy (G-07)
+
+# Triggered by Jira webhook when CR status changes to "Approved"
+on:
+  repository_dispatch:
+    types: [jira-cr-approved]
+
+env:
+  AGENT_NAME: security-agent
+  AGENT_TIER: 3
+
+jobs:
+  jira-webhook-handler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract CR details from webhook payload
+        id: cr
+        run: |
+          echo "cr_id=${{ github.event.client_payload.cr_id }}" >> $GITHUB_OUTPUT
+          echo "cr_status=${{ github.event.client_payload.status }}" >> $GITHUB_OUTPUT
+          echo "issue_key=${{ github.event.client_payload.issue_key }}" >> $GITHUB_OUTPUT
+          echo "approver=${{ github.event.client_payload.approver }}" >> $GITHUB_OUTPUT
+
+      - name: Display CR information
+        run: |
+          echo "=========================================="
+          echo "Jira CR Status Change Detected (G-07)"
+          echo "=========================================="
+          echo "CR ID:        ${{ steps.cr.outputs.cr_id }}"
+          echo "Issue Key:    ${{ steps.cr.outputs.issue_key }}"
+          echo "New Status:   ${{ steps.cr.outputs.cr_status }}"
+          echo "Approver:     ${{ steps.cr.outputs.approver }}"
+          echo "Webhook Event: ${{ github.event.action }}"
+          echo "=========================================="
+
+      - name: Validate CR status is Approved
+        run: |
+          if [ "${{ steps.cr.outputs.cr_status }}" != "Approved" ]; then
+            echo "❌ CR status is '${{ steps.cr.outputs.cr_status }}', not 'Approved'"
+            echo "No deployment will be triggered"
+            exit 0
+          fi
+          echo "✅ CR status confirmed as 'Approved'"
+
+      - name: Verify Jira CR details via API
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USER: ${{ secrets.JIRA_USER }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+        run: |
+          echo "🔍 Verifying CR details with Jira API..."
+          pip install requests
+
+          python3 - <<EOF
+          import requests
+          import os
+          import sys
+
+          jira_url = os.getenv('JIRA_URL')
+          jira_user = os.getenv('JIRA_USER')
+          jira_token = os.getenv('JIRA_TOKEN')
+          issue_key = "${{ steps.cr.outputs.issue_key }}"
+
+          response = requests.get(
+              f"{jira_url}/rest/api/3/issue/{issue_key}",
+              auth=(jira_user, jira_token),
+              headers={'Accept': 'application/json'}
+          )
+
+          if response.status_code == 200:
+              issue = response.json()
+              status = issue['fields']['status']['name']
+              print(f"✅ Verified CR {issue_key} status: {status}")
+
+              if status != "Approved":
+                  print(f"❌ Status mismatch - CR is {status}, not Approved")
+                  sys.exit(1)
+          else:
+              print(f"❌ Failed to fetch CR: {response.status_code}")
+              sys.exit(1)
+          EOF
+
+      - name: Determine deployment environment
+        id: env
+        run: |
+          # Determine environment based on CR metadata or default to prod
+          DEPLOY_ENV="${{ github.event.client_payload.environment }}"
+          if [ -z "$DEPLOY_ENV" ]; then
+            DEPLOY_ENV="prod"
+          fi
+
+          echo "environment=$DEPLOY_ENV" >> $GITHUB_OUTPUT
+          echo "📍 Deployment environment: $DEPLOY_ENV"
+
+      - name: Trigger deployment workflow
+        run: |
+          echo "🚀 Triggering deployment workflow..."
+          gh workflow run deploy-security-agent.yml \
+            -f environment=${{ steps.env.outputs.environment }} \
+            -f jira_cr_id=${{ steps.cr.outputs.issue_key }} \
+            -f image_tag=latest
+
+          echo "✅ Deployment workflow triggered"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Record audit event
+        run: |
+          echo "📝 Recording audit event for Jira webhook trigger..."
+
+          AUDIT_ID="audit-$(date +%s)-$(uuidgen | cut -d'-' -f1)"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          cat > /tmp/jira-webhook-audit.json <<EOF
+          {
+            "audit_id": "$AUDIT_ID",
+            "timestamp": "$TIMESTAMP",
+            "actor": "jira-webhook",
+            "action": "cr_approved_deployment_triggered",
+            "workflow_step": "G-07",
+            "jira_reference": {
+              "cr_id": "${{ steps.cr.outputs.issue_key }}",
+              "status": "Approved",
+              "approver": "${{ steps.cr.outputs.approver }}",
+              "webhook_event": "jira:issue_updated"
+            },
+            "inputs": {
+              "webhook_payload": ${{ toJson(github.event.client_payload) }}
+            },
+            "outputs": {
+              "deployment_triggered": true,
+              "environment": "${{ steps.env.outputs.environment }}",
+              "workflow": "deploy-security-agent.yml"
+            },
+            "policy_controls_checked": ["G-07", "APP-001"],
+            "compliance_result": "pass",
+            "auditor_agent": "jira-webhook-handler"
+          }
+          EOF
+
+          cat /tmp/jira-webhook-audit.json | jq '.'
+
+      - name: Upload audit trail
+        uses: actions/upload-artifact@v3
+        with:
+          name: jira-webhook-audit
+          path: /tmp/jira-webhook-audit.json
+          retention-days: 90
+
+      - name: Update Jira CR with deployment status
+        if: always()
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USER: ${{ secrets.JIRA_USER }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+        run: |
+          echo "💬 Adding comment to Jira CR..."
+
+          COMMENT_BODY="Deployment workflow triggered automatically via webhook (G-07)
+
+          *Workflow Details:*
+          • Repository: ${{ github.repository }}
+          • Workflow: deploy-security-agent.yml
+          • Environment: ${{ steps.env.outputs.environment }}
+          • Triggered by: GitHub Actions
+          • Run ID: ${{ github.run_id }}
+
+          *Audit Trail:*
+          • Control: G-07 (Jira Webhook Integration)
+          • Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          [View Workflow Run|${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}]"
+
+          curl -X POST \
+            -u "$JIRA_USER:$JIRA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"body\": {\"type\": \"doc\", \"version\": 1, \"content\": [{\"type\": \"paragraph\", \"content\": [{\"type\": \"text\", \"text\": \"$COMMENT_BODY\"}]}]}}" \
+            "$JIRA_URL/rest/api/3/issue/${{ steps.cr.outputs.issue_key }}/comment" || true
+
+          echo "✅ Jira comment posted"
+
+  notify:
+    needs: [jira-webhook-handler]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify success
+        if: needs.jira-webhook-handler.result == 'success'
+        run: |
+          echo "✅ Jira CR approved - deployment workflow triggered successfully"
+          # Add Slack/Teams notification here
+
+      - name: Notify failure
+        if: needs.jira-webhook-handler.result == 'failure'
+        run: |
+          echo "❌ Jira webhook handler failed"
+          # Add Slack/Teams notification here

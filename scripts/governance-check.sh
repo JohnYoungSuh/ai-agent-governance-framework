@@ -98,6 +98,129 @@ fi
 echo "✓ Checking observability setup..."
 echo "  ✅ OpenTelemetry instrumentation enabled"
 echo "  ✅ Prometheus metrics endpoint configured"
+
+# Check 7: AWS Resource Compliance (G-05)
+echo "✓ Checking AWS resource compliance (G-05)..."
+AWS_REGION=${AWS_REGION:-us-east-1}
+
+# Check KMS key rotation
+if command -v aws &> /dev/null; then
+    echo "  🔍 Validating KMS key rotation..."
+    KMS_KEY_ID=$(aws kms list-aliases --region "$AWS_REGION" 2>/dev/null | \
+        jq -r '.Aliases[] | select(.AliasName == "alias/agent-encryption") | .TargetKeyId' || echo "")
+
+    if [ -n "$KMS_KEY_ID" ]; then
+        ROTATION_STATUS=$(aws kms get-key-rotation-status --key-id "$KMS_KEY_ID" --region "$AWS_REGION" 2>/dev/null | \
+            jq -r '.KeyRotationEnabled' || echo "false")
+
+        if [ "$ROTATION_STATUS" = "true" ]; then
+            echo "  ✅ KMS key rotation enabled (SEC-001, MI-003)"
+            ((PASSED++))
+        else
+            echo "  ❌ KMS key rotation NOT enabled (SEC-001, MI-003)"
+            ((FAILED++))
+        fi
+    else
+        echo "  ⚠️  KMS key not found (may not be deployed yet)"
+    fi
+
+    # Check S3 bucket encryption
+    echo "  🔍 Validating S3 bucket encryption..."
+    S3_BUCKETS=$(aws s3api list-buckets --region "$AWS_REGION" 2>/dev/null | \
+        jq -r '.Buckets[] | select(.Name | contains("'"$AGENT_NAME"'")) | .Name' || echo "")
+
+    if [ -n "$S3_BUCKETS" ]; then
+        for BUCKET in $S3_BUCKETS; do
+            ENCRYPTION=$(aws s3api get-bucket-encryption --bucket "$BUCKET" --region "$AWS_REGION" 2>/dev/null | \
+                jq -r '.ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm' || echo "none")
+
+            if [ "$ENCRYPTION" = "aws:kms" ]; then
+                echo "  ✅ S3 bucket encrypted with KMS: $BUCKET (MI-003)"
+                ((PASSED++))
+            else
+                echo "  ❌ S3 bucket not KMS encrypted: $BUCKET (MI-003)"
+                ((FAILED++))
+            fi
+        done
+    else
+        echo "  ⚠️  No S3 buckets found for agent"
+    fi
+
+    # Check CloudWatch log retention
+    echo "  🔍 Validating CloudWatch log retention..."
+    LOG_GROUP="/aws/agent/${AGENT_NAME}"
+    LOG_RETENTION=$(aws logs describe-log-groups --log-group-name-prefix "$LOG_GROUP" --region "$AWS_REGION" 2>/dev/null | \
+        jq -r '.logGroups[0].retentionInDays // "null"' || echo "null")
+
+    if [ "$LOG_RETENTION" != "null" ] && [ "$LOG_RETENTION" -ge 90 ]; then
+        echo "  ✅ CloudWatch log retention configured: $LOG_RETENTION days (MI-019)"
+        ((PASSED++))
+    elif [ "$LOG_RETENTION" != "null" ]; then
+        echo "  ❌ CloudWatch log retention too short: $LOG_RETENTION days (minimum 90) (MI-019)"
+        ((FAILED++))
+    else
+        echo "  ⚠️  CloudWatch log group not found"
+    fi
+
+    # Check IAM policy wildcards
+    echo "  🔍 Validating IAM policies for wildcards..."
+    IAM_ROLE="${AGENT_NAME}-role"
+    IAM_POLICIES=$(aws iam list-attached-role-policies --role-name "$IAM_ROLE" --region "$AWS_REGION" 2>/dev/null | \
+        jq -r '.AttachedPolicies[].PolicyArn' || echo "")
+
+    WILDCARD_FOUND=false
+    if [ -n "$IAM_POLICIES" ]; then
+        for POLICY_ARN in $IAM_POLICIES; do
+            POLICY_VERSION=$(aws iam get-policy --policy-arn "$POLICY_ARN" --region "$AWS_REGION" 2>/dev/null | \
+                jq -r '.Policy.DefaultVersionId' || echo "")
+
+            if [ -n "$POLICY_VERSION" ]; then
+                POLICY_DOC=$(aws iam get-policy-version --policy-arn "$POLICY_ARN" --version-id "$POLICY_VERSION" --region "$AWS_REGION" 2>/dev/null | \
+                    jq -r '.PolicyVersion.Document' || echo "")
+
+                if echo "$POLICY_DOC" | grep -q '"Resource":\s*"\*"'; then
+                    echo "  ⚠️  Wildcard resource found in policy: $POLICY_ARN"
+                    WILDCARD_FOUND=true
+                fi
+            fi
+        done
+
+        if [ "$WILDCARD_FOUND" = false ]; then
+            echo "  ✅ No wildcard resources in IAM policies (SEC-001)"
+            ((PASSED++))
+        else
+            echo "  ❌ Wildcard resources found - use least privilege (SEC-001)"
+            ((FAILED++))
+        fi
+    else
+        echo "  ⚠️  IAM role not found: $IAM_ROLE"
+    fi
+
+    # Check Secrets Manager rotation
+    echo "  🔍 Validating Secrets Manager rotation..."
+    SECRETS=$(aws secretsmanager list-secrets --region "$AWS_REGION" 2>/dev/null | \
+        jq -r '.SecretList[] | select(.Name | contains("'"$AGENT_NAME"'")) | .Name' || echo "")
+
+    if [ -n "$SECRETS" ]; then
+        for SECRET in $SECRETS; do
+            ROTATION_ENABLED=$(aws secretsmanager describe-secret --secret-id "$SECRET" --region "$AWS_REGION" 2>/dev/null | \
+                jq -r '.RotationEnabled // false' || echo "false")
+
+            if [ "$ROTATION_ENABLED" = "true" ]; then
+                echo "  ✅ Secret rotation enabled: $SECRET (SEC-001)"
+                ((PASSED++))
+            else
+                echo "  ⚠️  Secret rotation not enabled: $SECRET (SEC-001)"
+            fi
+        done
+    else
+        echo "  ⚠️  No secrets found for agent"
+    fi
+
+else
+    echo "  ⚠️  AWS CLI not available - skipping AWS resource checks"
+    echo "     Install AWS CLI to enable compliance validation"
+fi
 echo "  ✅ Distributed tracing enabled"
 ((PASSED+=3))
 

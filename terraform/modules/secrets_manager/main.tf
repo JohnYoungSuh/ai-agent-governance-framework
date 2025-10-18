@@ -118,3 +118,31 @@ output "iam_policy_json" {
   description = "IAM policy document for secret access"
   value       = data.aws_iam_policy_document.secret_access.json
 }
+
+# G-03: Control Implementation Outputs
+output "control_implementation" {
+  description = "Control implementation details for SEC-001 (G-03)"
+  value = {
+    control_id          = "SEC-001"
+    control_family      = "Secrets Management"
+    nist_controls       = ["SC-28", "IA-5"]
+    cci_controls        = ["CCI-001199", "CCI-000196"]
+    aws_resources       = [for s in aws_secretsmanager_secret.agent_secrets : s.arn]
+    implementation_type = "AWS Secrets Manager + KMS"
+    kms_encrypted       = true
+    least_privilege     = true
+    agent_id            = var.agent_id
+    agent_tier          = var.agent_tier
+  }
+}
+
+output "audit_metadata" {
+  description = "Metadata for audit trail correlation"
+  value = {
+    module           = "secrets_manager"
+    control_ids      = var.control_id
+    resources_count  = length(aws_secretsmanager_secret.agent_secrets)
+    kms_key_id       = var.kms_key_id
+    created_at       = timestamp()
+  }
+}

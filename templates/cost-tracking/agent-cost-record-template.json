@@ -1,0 +1,48 @@
+{
+  "$comment": "Agent Cost Record Template - AI Agent Governance Framework v2.1",
+  "$comment_usage": "Copy this template and fill in values for each agent task execution",
+  "cost_id": "cost-1729274400-a1b2c3d4",
+  "timestamp": "2025-10-18T12:00:00Z",
+  "agent_id": "security-agent",
+  "tier": 3,
+  "task_id": "task-scan-vulnerabilities-001",
+  "tokens_used": {
+    "input_tokens": 15000,
+    "output_tokens": 5000,
+    "total_cost_usd": 0.65,
+    "model": "gpt-4-turbo",
+    "price_per_input_token": 0.00003,
+    "price_per_output_token": 0.00006
+  },
+  "runtime_seconds": 42.5,
+  "infra_cost_usd": 0.08,
+  "task_outcome": "success",
+  "audit_id": "audit-1729274400-xyz789",
+  "jira_reference": {
+    "cr_id": "CR-2025-1042",
+    "budget_tokens": 1000000,
+    "budget_usd": 50.0,
+    "approved_by": "Change Manager"
+  },
+  "cost_breakdown": {
+    "total_cost_usd": 0.73,
+    "llm_cost_usd": 0.65,
+    "compute_cost_usd": 0.05,
+    "storage_cost_usd": 0.02,
+    "network_cost_usd": 0.01
+  },
+  "opentelemetry": {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "span_id": "00f067aa0ba902b7",
+    "parent_span_id": null
+  },
+  "metadata": {
+    "environment": "prod",
+    "workflow_id": "github-actions-run-123456",
+    "tags": {
+      "control_id": "MI-009",
+      "cost_center": "security-ops",
+      "project": "vulnerability-scanning"
+    }
+  }
+}

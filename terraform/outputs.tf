@@ -120,6 +120,109 @@ output "compliance_regulations" {
   value       = var.compliance_regulations
 }
 
+# G-03: Control Implementation Mapping
+output "control_implementations" {
+  description = "Mapping of NIST/CCI controls to AWS resources (G-03)"
+  value = {
+    "SEC-001" = {
+      control_id          = "SEC-001"
+      control_family      = "Secrets Management"
+      nist_controls       = ["SC-28", "IA-5"]
+      cci_controls        = ["CCI-001199", "CCI-000196"]
+      aws_resources       = [
+        aws_secretsmanager_secret.llm_api_key.arn,
+        aws_secretsmanager_secret.github_token.arn,
+        aws_secretsmanager_secret.webhook_secret.arn
+      ]
+      implementation_type = "AWS Secrets Manager"
+      rotation_enabled    = true
+      kms_encrypted       = true
+    }
+    "MI-019" = {
+      control_id          = "MI-019"
+      control_family      = "Audit Trail"
+      nist_controls       = ["AU-2", "AU-3", "AU-6", "AU-12"]
+      cci_controls        = ["CCI-000130", "CCI-000131", "CCI-000132", "CCI-001464"]
+      aws_resources       = var.enable_audit_trail ? [
+        aws_dynamodb_table.audit_trail[0].arn,
+        aws_s3_bucket.audit_archive[0].arn,
+        aws_cloudwatch_log_group.agent_logs.arn
+      ] : []
+      implementation_type = "DynamoDB + S3 + CloudWatch"
+      retention_days      = 2555  # 7 years
+      tamper_protection   = true
+    }
+    "MI-003" = {
+      control_id          = "MI-003"
+      control_family      = "Encryption"
+      nist_controls       = ["SC-28", "SC-13"]
+      cci_controls        = ["CCI-001199", "CCI-002450"]
+      aws_resources       = [
+        aws_kms_key.agent_encryption.arn
+      ]
+      implementation_type = "AWS KMS"
+      key_rotation        = true
+      fips_140_2          = true
+    }
+    "APP-001" = {
+      control_id          = "APP-001"
+      control_family      = "Human Primacy"
+      nist_controls       = ["CM-3", "CM-4"]
+      cci_controls        = ["CCI-000067", "CCI-001813"]
+      aws_resources       = [
+        aws_sns_topic.agent_alerts.arn,
+        aws_cloudwatch_dashboard.agent_dashboard.dashboard_arn
+      ]
+      implementation_type = "Jira CR + SNS Notifications"
+      approval_required   = var.agent_tier >= 3
+      human_review_pct    = var.human_review_percentage
+    }
+    "LOG-001" = {
+      control_id          = "LOG-001"
+      control_family      = "Observability"
+      nist_controls       = ["AU-2", "AU-12", "SI-4"]
+      cci_controls        = ["CCI-000130", "CCI-001464", "CCI-001263"]
+      aws_resources       = [
+        aws_cloudwatch_log_group.agent_logs.arn,
+        aws_cloudwatch_dashboard.agent_dashboard.dashboard_arn
+      ]
+      implementation_type = "CloudWatch Logs + Metrics + Dashboards"
+      log_retention_days  = var.log_retention_days
+      metrics_enabled     = var.enable_observability
+    }
+    "CST-001" = {
+      control_id          = "CST-001"
+      control_family      = "Cost Control"
+      nist_controls       = []
+      cci_controls        = []
+      aws_resources       = [
+        aws_cloudwatch_metric_alarm.cost_alarm.arn,
+        aws_sns_topic.agent_alerts.arn
+      ]
+      implementation_type = "CloudWatch Alarms + Budgets"
+      daily_budget_usd    = var.daily_cost_budget
+      monthly_budget_usd  = var.monthly_cost_budget
+      alert_on_threshold  = true
+    }
+  }
+}
+
+output "compliance_evidence_manifest" {
+  description = "Compliance evidence manifest for audits (G-03)"
+  value = {
+    generated_at      = timestamp()
+    agent_name        = var.agent_name
+    agent_tier        = var.agent_tier
+    compliance_regs   = var.compliance_regulations
+    total_controls    = 6
+    controls_mapped   = ["SEC-001", "MI-019", "MI-003", "APP-001", "LOG-001", "CST-001"]
+    evidence_bucket   = aws_s3_bucket.governance_evidence.id
+    audit_table       = var.enable_audit_trail ? aws_dynamodb_table.audit_trail[0].name : "N/A"
+    kms_key_arn       = aws_kms_key.agent_encryption.arn
+    iam_role_arn      = aws_iam_role.agent_role.arn
+  }
+}
+
 output "security_summary" {
   description = "Security configuration summary"
   value = {
