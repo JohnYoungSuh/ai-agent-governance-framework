@@ -1,0 +1,31 @@
+{
+  "siem_event_id": "audit-1729180800-3a4b5c6d",
+  "timestamp": "2025-10-17T14:20:00Z",
+  "source": "jira",
+  "control_id": "APP-001",
+  "agent_id": "security-agent",
+  "tier": 3,
+  "jira_reference": {
+    "cr_id": "CR-2025-1042",
+    "approver_role": "Change Manager",
+    "status": "Approved",
+    "approved_at": "2025-10-17T14:15:00Z"
+  },
+  "payload": {
+    "action": "jira_approval_validation",
+    "validation_result": "pass",
+    "budget_tokens": 10000
+  },
+  "compliance_result": "pass",
+  "ocsf_mapping": {
+    "category_uid": 6,
+    "class_uid": 6001,
+    "severity_id": 1,
+    "activity_id": 1
+  },
+  "metadata": {
+    "environment": "prod",
+    "workflow_id": "github-actions-12345",
+    "correlation_id": "trace-abc123def456"
+  }
+}

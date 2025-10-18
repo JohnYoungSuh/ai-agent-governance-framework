@@ -22,6 +22,10 @@ on:
         description: 'Docker image tag'
         required: false
         default: 'latest'
+      jira_cr_id:
+        description: 'Jira CR ID (required for staging/prod)'
+        required: false
+        type: string
 
 env:
   AGENT_NAME: security-agent
@@ -30,9 +34,66 @@ env:
   IMAGE_NAME: ${{ github.repository }}/security-agent
 
 jobs:
-  # Stage 1: Governance & Security Checks
+  # Stage 1: Jira Approval Gate (Tier 3/4 Production Deployments)
+  jira-approval:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'staging' || github.event.inputs.environment == 'prod'
+    outputs:
+      audit-id: ${{ steps.validate.outputs.audit_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Jira CR ID provided
+        run: |
+          if [ -z "${{ github.event.inputs.jira_cr_id }}" ]; then
+            echo "❌ ERROR: Jira CR ID is required for staging/prod deployments (Tier ${{ env.AGENT_TIER }})"
+            echo ""
+            echo "GOVERNANCE VIOLATION:"
+            echo "  Control:     APP-001 (Human Primacy), G-02 (Approval Enforcement)"
+            echo "  Requirement: All Tier 3/4 deployments to staging/prod require Jira CR approval"
+            echo "  Action:      Provide jira_cr_id input parameter with approved CR"
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Validate Jira Approval
+        id: validate
+        env:
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+          JIRA_USER: ${{ secrets.JIRA_USER }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+        run: |
+          chmod +x scripts/validate-jira-approval.py
+          ./scripts/validate-jira-approval.py \
+            ${{ env.AGENT_NAME }} \
+            "${{ github.event.inputs.jira_cr_id }}" \
+            "Change Manager"
+
+          # Capture audit ID for downstream jobs
+          AUDIT_ID=$(cat /tmp/jira-approval-audit-id.txt)
+          echo "audit_id=$AUDIT_ID" >> $GITHUB_OUTPUT
+          echo "Audit ID: $AUDIT_ID"
+
+      - name: Upload audit trail
+        uses: actions/upload-artifact@v3
+        with:
+          name: jira-approval-audit
+          path: /tmp/audit-*.json
+          retention-days: 90
+
+  # Stage 2: Governance & Security Checks
   governance:
     runs-on: ubuntu-latest
+    needs: [jira-approval]
+    if: always() && (needs.jira-approval.result == 'success' || needs.jira-approval.result == 'skipped')
     outputs:
       approved: ${{ steps.check.outputs.approved }}
     steps:
@@ -63,9 +124,10 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
-  # Stage 2: Build & Push Docker Image
+  # Stage 3: Build & Push Docker Image
   build:
-    needs: governance
+    needs: [jira-approval, governance]
+    if: always() && (needs.jira-approval.result == 'success' || needs.jira-approval.result == 'skipped') && needs.governance.result == 'success'
     runs-on: ubuntu-latest
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
@@ -110,10 +172,10 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-  # Stage 3: Deploy to Dev
+  # Stage 4: Deploy to Dev
   deploy-dev:
-    needs: build
-    if: github.event.inputs.environment == 'dev' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
+    needs: [jira-approval, build]
+    if: (always() && (needs.jira-approval.result == 'success' || needs.jira-approval.result == 'skipped') && needs.build.result == 'success') && (github.event.inputs.environment == 'dev' || (github.ref == 'refs/heads/main' && github.event_name == 'push'))
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -153,10 +215,10 @@ jobs:
             --rm -i \
             -- curl -f http://${{ env.AGENT_NAME }}:8080/health || exit 1
 
-  # Stage 4: Deploy to Staging
+  # Stage 5: Deploy to Staging
   deploy-staging:
-    needs: [build, deploy-dev]
-    if: github.event.inputs.environment == 'staging' || github.event.inputs.environment == 'prod'
+    needs: [jira-approval, build, deploy-dev]
+    if: (needs.jira-approval.result == 'success' && needs.build.result == 'success') && (github.event.inputs.environment == 'staging' || github.event.inputs.environment == 'prod')
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -183,10 +245,10 @@ jobs:
       - name: Verify deployment
         run: kubectl rollout status deployment/${{ env.AGENT_NAME }} -n ai-agents-staging
 
-  # Stage 5: Deploy to Production
+  # Stage 6: Deploy to Production
   deploy-prod:
-    needs: [build, deploy-staging]
-    if: github.event.inputs.environment == 'prod'
+    needs: [jira-approval, build, deploy-staging]
+    if: needs.jira-approval.result == 'success' && needs.build.result == 'success' && github.event.inputs.environment == 'prod'
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -227,6 +289,8 @@ jobs:
             --tier ${{ env.AGENT_TIER }} \
             --user "${{ github.actor }}" \
             --commit "${{ github.sha }}" \
+            --jira-cr "${{ github.event.inputs.jira_cr_id }}" \
+            --jira-audit-id "${{ needs.jira-approval.outputs.audit-id }}" \
             --environment production || echo "Audit recording unavailable"
 
       - name: Post-deployment validation
@@ -238,9 +302,9 @@ jobs:
             --rm -i \
             -- curl -f http://${{ env.AGENT_NAME }}:8080/health
 
-  # Stage 6: Notify
+  # Stage 7: Notify
   notify:
-    needs: [deploy-dev, deploy-staging, deploy-prod]
+    needs: [jira-approval, deploy-dev, deploy-staging, deploy-prod]
     if: always()
     runs-on: ubuntu-latest
     steps:

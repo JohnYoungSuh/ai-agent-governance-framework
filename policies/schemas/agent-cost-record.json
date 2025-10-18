@@ -1,0 +1,245 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Cost Record",
+  "description": "Cost tracking schema for AI agent tasks with OpenTelemetry correlation support",
+  "type": "object",
+  "required": [
+    "cost_id",
+    "timestamp",
+    "agent_id",
+    "tier",
+    "task_id",
+    "tokens_used",
+    "runtime_seconds",
+    "infra_cost_usd",
+    "task_outcome",
+    "audit_id"
+  ],
+  "properties": {
+    "cost_id": {
+      "type": "string",
+      "description": "Unique cost record identifier",
+      "pattern": "^cost-[0-9]+-[a-f0-9]{8}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when cost was recorded (UTC)"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Agent identifier (e.g., security-agent, ops-agent-01)"
+    },
+    "tier": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "description": "Agent tier (1=Observer, 2=Developer, 3=Operations, 4=Architect)"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Task or workflow identifier for cost correlation"
+    },
+    "tokens_used": {
+      "type": "object",
+      "description": "LLM token usage breakdown",
+      "required": ["input_tokens", "output_tokens", "total_cost_usd"],
+      "properties": {
+        "input_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of input tokens consumed"
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of output tokens generated"
+        },
+        "total_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total cost for token usage in USD"
+        },
+        "model": {
+          "type": "string",
+          "description": "LLM model used (e.g., gpt-4, claude-3-opus)"
+        },
+        "price_per_input_token": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per input token in USD"
+        },
+        "price_per_output_token": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per output token in USD"
+        }
+      }
+    },
+    "runtime_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total runtime for task in seconds"
+    },
+    "infra_cost_usd": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Infrastructure cost (compute, storage, network) in USD"
+    },
+    "task_outcome": {
+      "type": "string",
+      "enum": ["success", "failure", "partial", "timeout", "cancelled"],
+      "description": "Final outcome of the task"
+    },
+    "audit_id": {
+      "type": "string",
+      "description": "Reference to audit-trail entry for this task"
+    },
+    "jira_reference": {
+      "type": "object",
+      "description": "Jira CR reference for budget correlation (required for Tier 3/4)",
+      "properties": {
+        "cr_id": {
+          "type": "string",
+          "description": "Jira Change Request ID",
+          "pattern": "^CR-[0-9]{4}-[0-9]{4}$"
+        },
+        "budget_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Approved token budget from Jira CR"
+        },
+        "budget_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Approved cost budget from Jira CR in USD"
+        },
+        "budget_remaining": {
+          "type": "number",
+          "description": "Remaining budget after this task (negative indicates overrun)"
+        }
+      },
+      "required": ["cr_id"]
+    },
+    "cost_breakdown": {
+      "type": "object",
+      "description": "Detailed cost breakdown by category",
+      "properties": {
+        "llm_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cost for LLM API calls"
+        },
+        "compute_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Compute/Lambda execution cost"
+        },
+        "storage_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "S3/DynamoDB storage cost"
+        },
+        "network_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Data transfer and API call costs"
+        },
+        "tool_usage_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cost for external tool/API usage"
+        },
+        "total_cost_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Sum of all cost categories"
+        }
+      },
+      "required": ["total_cost_usd"]
+    },
+    "roi_metrics": {
+      "type": "object",
+      "description": "Return on investment metrics",
+      "properties": {
+        "human_time_saved_hours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Estimated human time saved by agent automation"
+        },
+        "human_hourly_rate_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Assumed hourly rate for human equivalent work"
+        },
+        "value_delivered_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Estimated value delivered (time saved × hourly rate)"
+        },
+        "roi_ratio": {
+          "type": "string",
+          "description": "ROI ratio in format 'X:1' (e.g., '5:1' means $5 value per $1 spent)",
+          "pattern": "^[0-9]+(\\.[0-9]+)?:1$"
+        },
+        "iterations_required": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of attempts needed to complete task"
+        },
+        "success_on_first_attempt": {
+          "type": "boolean",
+          "description": "Whether task succeeded on first attempt"
+        }
+      }
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["dev", "staging", "prod"],
+      "description": "Deployment environment where task executed"
+    },
+    "opentelemetry_context": {
+      "type": "object",
+      "description": "OpenTelemetry trace context for correlation",
+      "properties": {
+        "trace_id": {
+          "type": "string",
+          "description": "Distributed trace ID"
+        },
+        "span_id": {
+          "type": "string",
+          "description": "Span ID for this specific operation"
+        },
+        "parent_span_id": {
+          "type": "string",
+          "description": "Parent span ID if part of larger workflow"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for analysis",
+      "properties": {
+        "workflow_id": {
+          "type": "string",
+          "description": "CI/CD workflow run ID"
+        },
+        "commit_sha": {
+          "type": "string",
+          "description": "Git commit SHA that triggered task"
+        },
+        "user": {
+          "type": "string",
+          "description": "User who initiated task"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tags for cost categorization and analysis"
+        }
+      }
+    }
+  }
+}

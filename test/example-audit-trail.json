@@ -1,0 +1,27 @@
+{
+  "audit_id": "audit-1729180800-3a4b5c6d",
+  "timestamp": "2025-10-17T14:20:00Z",
+  "actor": "ci-cd-pipeline",
+  "action": "jira_approval_validation",
+  "workflow_step": "APP-001",
+  "jira_reference": {
+    "cr_id": "CR-2025-1042",
+    "approver_role": "Change Manager",
+    "budget_tokens": 10000,
+    "controls": ["APP-001", "G-02", "G-07"]
+  },
+  "inputs": {
+    "agent_id": "security-agent",
+    "cr_id": "CR-2025-1042",
+    "required_approver_role": "Change Manager"
+  },
+  "outputs": {
+    "validation_result": "pass",
+    "cr_status": "Approved",
+    "approval_verified": true
+  },
+  "policy_controls_checked": ["APP-001", "G-02", "G-07"],
+  "compliance_result": "pass",
+  "evidence_hash": "sha256:a3f5e8d9c2b1a0f9e8d7c6b5a4f3e2d1",
+  "auditor_agent": "jira-approval-validator-py"
+}

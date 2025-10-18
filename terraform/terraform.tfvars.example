@@ -1,81 +1,102 @@
-# Example Terraform Variables Configuration
-# Copy this file to terraform.tfvars and update with your values
+# Example Terraform Variables File
+# AI Agent Governance Framework v2.0
+#
+# Copy this file to terraform.tfvars and fill in actual values
+# cp terraform.tfvars.example terraform.tfvars
+#
+# IMPORTANT: Never commit terraform.tfvars to version control!
+# Add to .gitignore to protect sensitive values
 
+# ============================================================================
+# Required Variables (MUST BE SET)
+# ============================================================================
+
+# Agent name (lowercase alphanumeric with hyphens, 3-30 characters)
+agent_name = "security-agent"
+
+# LLM API key (get from provider)
+# Anthropic: https://console.anthropic.com/settings/keys
+# OpenAI: https://platform.openai.com/api-keys
+llm_api_key = "sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+# GitHub personal access token for CI/CD integration
+# Create at: https://github.com/settings/tokens
+# Required scopes: repo, workflow
+github_token = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+# ============================================================================
+# Agent Configuration
+# ============================================================================
+
+# Agent tier (tier1-observer, tier2-developer, tier3-operations, tier4-architect)
+agent_tier = "tier3-operations"
+
+# LLM provider (anthropic, openai, bedrock)
+llm_model_provider = "anthropic"
+
+# LLM model version (pinned per MI-010)
+llm_model_version = "claude-sonnet-4-5-20250929"
+
+# ============================================================================
 # AWS Configuration
+# ============================================================================
+
+# AWS region
 aws_region = "us-east-1"
 
-# Agent Configuration
-agent_name  = "ai-ops-agent"
-agent_tier  = "tier3-operations" # tier1-observer, tier2-developer, tier3-operations, tier4-architect
-environment = "production"       # dev, staging, production
+# Environment (dev, staging, production)
+environment = "dev"
 
-# GitHub Configuration
-github_organization = "suhlabs"
-github_repository   = "my-infrastructure-repo"
-github_token        = "" # Set via environment variable: TF_VAR_github_token
-github_workflow_file = "ai-ops-agent.yml"
+# Email for cost and operational alerts
+alert_email = "team@example.com"
 
-# LLM Configuration (MI-010: Version Pinning)
-llm_model_provider = "anthropic"                  # anthropic, openai, bedrock
-llm_model_version  = "claude-sonnet-4-5-20250929" # Pinned version
+# ============================================================================
+# Cost Controls (MI-009, MI-021)
+# ============================================================================
 
-# Cost Management (MI-009, MI-021)
-daily_cost_budget   = 100.0  # USD
-monthly_cost_budget = 2000.0 # USD
+# Daily cost budget in USD
+daily_cost_budget = 100.0
 
-# Governance Controls (MI-007)
-human_review_percentage = 0.25 # 25% for Tier 3
+# Monthly cost budget in USD
+monthly_cost_budget = 2000.0
 
-# Feature Toggles
-enable_audit_trail   = true
-enable_observability = true
+# ============================================================================
+# Security Controls
+# ============================================================================
 
-# Security Controls (MI-001, MI-002, MI-003)
-enable_pii_redaction              = true
-enable_secrets_scanning           = true
+enable_pii_redaction = true
+enable_secrets_scanning = true
 enable_prompt_injection_detection = true
 
-# VPC Configuration (optional for MI-008 sandboxing)
-# vpc_id = "vpc-xxxxx"
+# ============================================================================
+# Governance Controls
+# ============================================================================
 
-# Notification Configuration
-slack_webhook_url = "" # Set via environment variable: TF_VAR_slack_webhook_url
-jira_api_url      = "" # e.g., https://your-domain.atlassian.net
+# Human review percentage (MI-007)
+human_review_percentage = 0.25
 
-# Tier-Specific Permissions (MI-020)
-allowed_actions = [
-  "read_data",
-  "modify_dev",
-  "deploy_staging",
-  "deploy_prod"
-]
+# Applicable compliance regulations
+compliance_regulations = ["GDPR", "SOX", "HIPAA"]
 
-# Compliance Configuration (MI-018)
-compliance_regulations = [
-  "GDPR",
-  "SOX",
-  "EU_AI_ACT"
-]
-
-# Risk Controls Required (MI-001 to MI-021)
+# Required risk control mitigations
 risk_controls_required = [
-  "MI-001", # Data Leakage Prevention
-  "MI-002", # Input Filtering
-  "MI-003", # Secrets Management
-  "MI-004", # Observability
-  "MI-005", # Rate Limiting
-  "MI-006", # Access Controls
-  "MI-007", # Human Review
-  "MI-009", # Cost Monitoring
-  "MI-019", # Audit Trails
-  "MI-020", # Tier Enforcement
-  "MI-021"  # Budget Limits
+  "MI-001",
+  "MI-002",
+  "MI-003",
+  "MI-004",
+  "MI-007",
+  "MI-009",
+  "MI-019",
+  "MI-020",
+  "MI-021"
 ]
 
-# Additional Tags
+# ============================================================================
+# Tagging
+# ============================================================================
+
 tags = {
-  Environment = "production"
-  Team        = "ai-ops"
-  CostCenter  = "engineering"
-  Project     = "ai-agent-governance"
+  Team       = "Platform-Engineering"
+  CostCenter = "AI-Operations"
+  Owner      = "platform-team@example.com"
 }

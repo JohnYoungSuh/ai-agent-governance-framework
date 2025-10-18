@@ -1,0 +1,53 @@
+{
+  "cost_id": "cost-1729180800-3a4b5c6d",
+  "timestamp": "2025-10-17T14:22:00Z",
+  "agent_id": "security-agent",
+  "tier": 3,
+  "task_id": "github-actions-12345",
+  "tokens_used": {
+    "input_tokens": 5000,
+    "output_tokens": 2000,
+    "total_cost_usd": 0.14,
+    "model": "claude-3-opus",
+    "price_per_input_token": 0.000015,
+    "price_per_output_token": 0.000075
+  },
+  "runtime_seconds": 120,
+  "infra_cost_usd": 0.02,
+  "task_outcome": "success",
+  "audit_id": "audit-1729180800-3a4b5c6d",
+  "jira_reference": {
+    "cr_id": "CR-2025-1042",
+    "budget_tokens": 10000,
+    "budget_usd": 100.00,
+    "budget_remaining": 99.84
+  },
+  "cost_breakdown": {
+    "llm_cost_usd": 0.14,
+    "compute_cost_usd": 0.01,
+    "storage_cost_usd": 0.005,
+    "network_cost_usd": 0.005,
+    "tool_usage_cost_usd": 0.00,
+    "total_cost_usd": 0.16
+  },
+  "roi_metrics": {
+    "human_time_saved_hours": 2.5,
+    "human_hourly_rate_usd": 75,
+    "value_delivered_usd": 187.50,
+    "roi_ratio": "11.7:1",
+    "iterations_required": 1,
+    "success_on_first_attempt": true
+  },
+  "environment": "prod",
+  "opentelemetry_context": {
+    "trace_id": "abc123def456789",
+    "span_id": "span-001",
+    "parent_span_id": "span-000"
+  },
+  "metadata": {
+    "workflow_id": "github-actions-12345",
+    "commit_sha": "a3f5e8d9c2b1a0f9",
+    "user": "github-actions[bot]",
+    "tags": ["deployment", "tier3", "production"]
+  }
+}
