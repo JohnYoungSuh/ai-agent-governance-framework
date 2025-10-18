@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-agents-dev
+  labels:
+    environment: dev
+    framework: ai-governance
+    framework-version: "2.1.0"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-agents-staging
+  labels:
+    environment: staging
+    framework: ai-governance
+    framework-version: "2.1.0"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-agents-prod
+  labels:
+    environment: prod
+    framework: ai-governance
+    framework-version: "2.1.0"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-agents-monitoring
+  labels:
+    framework: ai-governance
+    purpose: monitoring
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-agents-system
+  labels:
+    framework: ai-governance
+    purpose: shared-infrastructure

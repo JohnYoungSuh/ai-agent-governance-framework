@@ -1,0 +1,257 @@
+name: Deploy Security Agent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agents/security/**'
+      - 'deploy/helm/ai-agent/values-security.yaml'
+      - '.github/workflows/deploy-security-agent.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      image_tag:
+        description: 'Docker image tag'
+        required: false
+        default: 'latest'
+
+env:
+  AGENT_NAME: security-agent
+  AGENT_TIER: 3
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/security-agent
+
+jobs:
+  # Stage 1: Governance & Security Checks
+  governance:
+    runs-on: ubuntu-latest
+    outputs:
+      approved: ${{ steps.check.outputs.approved }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run governance check
+        id: check
+        run: |
+          chmod +x scripts/governance-check.sh
+          ./scripts/governance-check.sh \
+            --agent ${{ env.AGENT_NAME }} \
+            --tier ${{ env.AGENT_TIER }} \
+            --environment ${{ github.event.inputs.environment || 'dev' }} \
+            --budget-limit 150
+
+      - name: Security scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'agents/security'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Stage 2: Build & Push Docker Image
+  build:
+    needs: governance
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix={{branch}}-
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: agents/security/docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+  # Stage 3: Deploy to Dev
+  deploy-dev:
+    needs: build
+    if: github.event.inputs.environment == 'dev' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > $HOME/.kube/config
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.12.0'
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install ${{ env.AGENT_NAME }} deploy/helm/ai-agent \
+            --namespace ai-agents-dev \
+            --create-namespace \
+            --values deploy/helm/ai-agent/values-security.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.build.outputs.image-tag }} \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ env.AGENT_NAME }} -n ai-agents-dev
+          kubectl get pods -n ai-agents-dev -l app=${{ env.AGENT_NAME }}
+
+      - name: Run smoke tests
+        run: |
+          kubectl run -n ai-agents-dev smoke-test \
+            --image=curlimages/curl:latest \
+            --restart=Never \
+            --rm -i \
+            -- curl -f http://${{ env.AGENT_NAME }}:8080/health || exit 1
+
+  # Stage 4: Deploy to Staging
+  deploy-staging:
+    needs: [build, deploy-dev]
+    if: github.event.inputs.environment == 'staging' || github.event.inputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install ${{ env.AGENT_NAME }} deploy/helm/ai-agent \
+            --namespace ai-agents-staging \
+            --create-namespace \
+            --values deploy/helm/ai-agent/values-security.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.build.outputs.image-tag }} \
+            --wait
+
+      - name: Verify deployment
+        run: kubectl rollout status deployment/${{ env.AGENT_NAME }} -n ai-agents-staging
+
+  # Stage 5: Deploy to Production
+  deploy-prod:
+    needs: [build, deploy-staging]
+    if: github.event.inputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://console.aws.amazon.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > $HOME/.kube/config
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install ${{ env.AGENT_NAME }} deploy/helm/ai-agent \
+            --namespace ai-agents-prod \
+            --create-namespace \
+            --values deploy/helm/ai-agent/values-security.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.build.outputs.image-tag }} \
+            --wait \
+            --timeout 10m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ env.AGENT_NAME }} -n ai-agents-prod
+          kubectl get pods,svc,cronjobs -n ai-agents-prod -l app=${{ env.AGENT_NAME }}
+
+      - name: Record audit event
+        run: |
+          kubectl exec -n ai-agents-prod deployment/audit-recorder -- \
+            /app/record-event.sh \
+            --agent ${{ env.AGENT_NAME }} \
+            --event DEPLOYMENT \
+            --tier ${{ env.AGENT_TIER }} \
+            --user "${{ github.actor }}" \
+            --commit "${{ github.sha }}" \
+            --environment production || echo "Audit recording unavailable"
+
+      - name: Post-deployment validation
+        run: |
+          sleep 30
+          kubectl run -n ai-agents-prod smoke-test \
+            --image=curlimages/curl:latest \
+            --restart=Never \
+            --rm -i \
+            -- curl -f http://${{ env.AGENT_NAME }}:8080/health
+
+  # Stage 6: Notify
+  notify:
+    needs: [deploy-dev, deploy-staging, deploy-prod]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify on success
+        if: needs.deploy-prod.result == 'success' || needs.deploy-dev.result == 'success'
+        run: |
+          echo "✅ Security Agent deployed successfully to ${{ github.event.inputs.environment || 'dev' }}"
+          # Add Slack/Teams notification here
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Security Agent deployment failed"
+          # Add Slack/Teams notification here

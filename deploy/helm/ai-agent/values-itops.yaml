@@ -1,0 +1,235 @@
+# IT-Ops Agent - Helm Values
+# Tier 3: Operations (Production with approval)
+# Runtime: Deployment (long-running API server for real-time incident response)
+
+agent:
+  name: it-ops-agent
+  tier: 3
+  type: it-ops
+  version: "1.0.0"
+  frameworkVersion: "2.1.0"
+
+image:
+  repository: ghcr.io/your-org/it-ops-agent
+  pullPolicy: Always
+  tag: "latest"
+
+# Long-running deployment (PRIMARY RUNTIME)
+replicaCount: 3  # High availability for incident response
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 9090
+
+# Resources - Real-time operations require more resources
+resources:
+  requests:
+    cpu: 1
+    memory: 2Gi
+    ephemeral-storage: 2Gi
+  limits:
+    cpu: 4
+    memory: 8Gi
+    ephemeral-storage: 10Gi
+
+# Auto-scaling based on load
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Persistence for logs and runbook history
+persistence:
+  enabled: true
+  storageClassName: standard
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  mountPath: /var/ops-data
+
+# No CronJob - this is a long-running service
+cronjob:
+  enabled: false
+
+# Agent-specific configuration
+config:
+  agentConfig: |
+    agent:
+      name: it-ops-agent
+      tier: 3
+      version: "1.0.0"
+      framework_version: "2.1.0"
+      description: "IT operations automation, incident response, and deployment management"
+
+    capabilities:
+      deployment_automation:
+        enabled: true
+        environments:
+          - dev
+          - staging
+          - prod
+        approval_required:
+          - prod
+
+      incident_response:
+        enabled: true
+        severity_levels:
+          - P0  # Critical
+          - P1  # High
+          - P2  # Medium
+          - P3  # Low
+        auto_remediation:
+          enabled: true
+          severity_threshold: P2
+
+      resource_scaling:
+        enabled: true
+        auto_scale: true
+        scale_up_threshold: 80
+        scale_down_threshold: 30
+
+    integrations:
+      kubernetes:
+        enabled: true
+        api_server: https://kubernetes.default.svc
+        namespaces:
+          - ai-agents-dev
+          - ai-agents-staging
+          - ai-agents-prod
+
+      prometheus:
+        enabled: true
+        endpoint: http://prometheus-server.ai-agents-monitoring:80
+
+      alertmanager:
+        enabled: true
+        endpoint: http://alertmanager.ai-agents-monitoring:9093
+
+      pagerduty:
+        enabled: true
+        escalation_policy: ai-agents-oncall
+
+    runbooks:
+      storage: /var/ops-data/runbooks
+      format: yaml
+      auto_execute: false  # Require approval
+
+    observability:
+      metrics:
+        enabled: true
+        port: 9090
+      traces:
+        enabled: true
+        endpoint: http://jaeger-collector.ai-agents-monitoring:14268/api/traces
+      logs:
+        level: info
+        format: json
+
+# Environment variables
+env:
+  - name: AGENT_NAME
+    value: it-ops-agent
+  - name: AGENT_TIER
+    value: "3"
+  - name: FRAMEWORK_VERSION
+    value: "2.1.0"
+  - name: ENVIRONMENT
+    value: production
+  - name: RUNTIME_MODE
+    value: long-running
+
+# Secrets (managed by External Secrets Operator)
+secrets:
+  create: false
+  externalSecrets:
+    enabled: true
+    backend: aws-secrets-manager
+    secretStoreRef: aws-secret-store
+    dataFrom:
+      - extract:
+          key: ai-agents/prod/it-ops-agent
+
+# RBAC - IT-Ops agent needs broader permissions
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services", "configmaps", "events"]
+      verbs: ["get", "list", "watch", "create", "update", "patch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "statefulsets", "daemonsets"]
+      verbs: ["get", "list", "watch", "update", "patch"]
+    - apiGroups: ["batch"]
+      resources: ["jobs", "cronjobs"]
+      verbs: ["get", "list", "watch", "create"]
+    - apiGroups: ["autoscaling"]
+      resources: ["horizontalpodautoscalers"]
+      verbs: ["get", "list", "watch", "update", "patch"]
+
+# Governance
+governance:
+  budgetMonthly: 300
+  costCenter: operations
+  approvers: ops-team,platform-team
+  tier: 3
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheusRule:
+    enabled: true
+    rules:
+      - alert: IncidentResponseSlow
+        expr: ops_incident_response_time > 300
+        for: 1m
+        annotations:
+          summary: "Incident response time > 5 minutes"
+      - alert: DeploymentFailureRate
+        expr: rate(ops_deployment_failures[5m]) > 0.1
+        for: 5m
+        annotations:
+          summary: "Deployment failure rate high"
+      - alert: ITOpsAgentDown
+        expr: up{app="it-ops-agent"} == 0
+        for: 1m
+        annotations:
+          summary: "IT-Ops agent is down - CRITICAL"
+  serviceMonitor:
+    enabled: true
+    interval: 15s  # More frequent monitoring
+
+# Pod Disruption Budget - Ensure availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2  # Always keep 2 replicas running
+
+# Network Policy
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    # Allow Kubernetes API access
+    - to:
+      - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 6443
+        - protocol: TCP
+          port: 443
+    # Allow monitoring and alerting
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            framework: ai-governance
+            purpose: monitoring

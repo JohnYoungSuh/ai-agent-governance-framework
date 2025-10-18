@@ -1,0 +1,230 @@
+# AI Agent - Helm Values
+# Tier 3: Operations (Production with approval)
+# Runtime: CronJob (scheduled ML training jobs)
+
+agent:
+  name: ai-agent
+  tier: 3
+  type: ai
+  version: "1.0.0"
+  frameworkVersion: "2.1.0"
+
+image:
+  repository: ghcr.io/your-org/ai-agent
+  pullPolicy: Always
+  tag: "latest"
+
+# Minimal deployment for model serving (optional)
+replicaCount: 1
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 9090
+
+# Resources - ML training requires significant resources
+resources:
+  requests:
+    cpu: 2
+    memory: 4Gi
+    ephemeral-storage: 5Gi
+    # nvidia.com/gpu: 1  # Uncomment for GPU support
+  limits:
+    cpu: 8
+    memory: 16Gi
+    ephemeral-storage: 20Gi
+    # nvidia.com/gpu: 1  # Uncomment for GPU support
+
+# Auto-scaling (for serving deployment)
+autoscaling:
+  enabled: false  # Disabled for training jobs
+
+# Persistence for models and datasets
+persistence:
+  enabled: true
+  storageClassName: standard
+  accessMode: ReadWriteOnce
+  size: 50Gi  # Large storage for models and data
+  mountPath: /var/ml-data
+
+# CronJob for scheduled training (PRIMARY RUNTIME)
+cronjob:
+  enabled: true
+  schedule: "0 0 * * 0"  # Weekly on Sunday at midnight
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  backoffLimit: 1
+  activeDeadlineSeconds: 28800  # 8 hours timeout for training
+
+# Agent-specific configuration
+config:
+  agentConfig: |
+    agent:
+      name: ai-agent
+      tier: 3
+      version: "1.0.0"
+      framework_version: "2.1.0"
+      description: "AI/ML model training, deployment, and monitoring"
+
+    training:
+      schedule: "0 0 * * 0"  # Weekly
+      framework: pytorch  # or tensorflow, scikit-learn
+      distributed: false
+      gpu_enabled: false  # Set to true when GPU available
+
+      hyperparameters:
+        learning_rate: 0.001
+        batch_size: 32
+        epochs: 10
+
+      checkpointing:
+        enabled: true
+        frequency: 5  # Save every 5 epochs
+        path: /var/ml-data/checkpoints
+
+    model_registry:
+      backend: mlflow
+      tracking_uri: http://mlflow.ai-agents-system:5000
+      experiment_name: ai-agent-experiments
+
+      metadata:
+        tags:
+          - governance-framework
+          - automated-training
+
+    deployment:
+      auto_deploy: false  # Require manual approval
+      serving_framework: torchserve  # or tensorflow-serving
+      endpoints:
+        - name: predict
+          path: /v1/predict
+          method: POST
+
+      validation:
+        enabled: true
+        test_dataset: /var/ml-data/test_data
+        accuracy_threshold: 0.85
+
+    monitoring:
+      model_performance:
+        enabled: true
+        metrics:
+          - accuracy
+          - precision
+          - recall
+          - f1_score
+
+      data_drift:
+        enabled: true
+        detection_method: statistical
+        alert_threshold: 0.1
+
+    observability:
+      metrics:
+        enabled: true
+        port: 9090
+      traces:
+        enabled: true
+        endpoint: http://jaeger-collector.ai-agents-monitoring:14268/api/traces
+      logs:
+        level: info
+        format: json
+
+# Environment variables
+env:
+  - name: AGENT_NAME
+    value: ai-agent
+  - name: AGENT_TIER
+    value: "3"
+  - name: FRAMEWORK_VERSION
+    value: "2.1.0"
+  - name: ENVIRONMENT
+    value: production
+  - name: TRAINING_MODE
+    value: scheduled
+
+# Secrets (managed by External Secrets Operator)
+secrets:
+  create: false
+  externalSecrets:
+    enabled: true
+    backend: aws-secrets-manager
+    secretStoreRef: aws-secret-store
+    dataFrom:
+      - extract:
+          key: ai-agents/prod/ai-agent
+
+# Governance
+governance:
+  budgetMonthly: 800  # Higher due to compute costs
+  costCenter: ai-ml
+  approvers: ml-team,data-science-team
+  tier: 3
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheusRule:
+    enabled: true
+    rules:
+      - alert: TrainingJobFailed
+        expr: ai_training_job_status == 0
+        for: 5m
+        annotations:
+          summary: "ML training job failed"
+      - alert: ModelAccuracyDrop
+        expr: ai_model_accuracy < 0.85
+        for: 10m
+        annotations:
+          summary: "Model accuracy below threshold"
+      - alert: DataDriftDetected
+        expr: ai_data_drift_score > 0.1
+        for: 15m
+        annotations:
+          summary: "Data drift detected"
+  serviceMonitor:
+    enabled: true
+    interval: 60s
+
+# Node selector for GPU nodes (if available)
+nodeSelector: {}
+  # nvidia.com/gpu: "true"
+
+# Tolerations for GPU nodes
+tolerations:
+  - key: "ai-agents"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  # - key: "nvidia.com/gpu"
+  #   operator: "Equal"
+  #   value: "true"
+  #   effect: "NoSchedule"
+
+# Network Policy
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    # Allow S3/cloud storage access
+    - to:
+      - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow MLflow tracking server
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            framework: ai-governance
+            purpose: shared-infrastructure

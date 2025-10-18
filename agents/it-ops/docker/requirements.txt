@@ -1,0 +1,39 @@
+# IT-Ops Agent - Python Dependencies
+
+# Web framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# Kubernetes operations
+kubernetes==28.1.0
+kubernetes-asyncio==28.1.0
+
+# Cloud providers
+boto3==1.34.0
+azure-identity==1.15.0
+azure-mgmt-compute==30.3.0
+google-cloud-compute==1.14.1
+
+# Monitoring and alerting
+prometheus-api-client==0.5.3
+alertmanager-client==0.1.0
+
+# Observability
+opentelemetry-api==1.21.0
+opentelemetry-sdk==1.21.0
+opentelemetry-instrumentation-fastapi==0.42b0
+opentelemetry-exporter-jaeger==1.21.0
+prometheus-client==0.19.0
+
+# Utilities
+pyyaml==6.0.1
+requests==2.31.0
+python-json-logger==2.0.7
+aiohttp==3.9.1
+jinja2==3.1.2
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0

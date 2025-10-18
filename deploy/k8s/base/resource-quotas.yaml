@@ -1,0 +1,117 @@
+---
+# Development Environment Resource Quota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-quota
+  namespace: ai-agents-dev
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    persistentvolumeclaims: "10"
+    services.loadbalancers: "2"
+    count/deployments.apps: "10"
+    count/jobs.batch: "20"
+---
+# Development Environment Limit Range
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: dev-limits
+  namespace: ai-agents-dev
+spec:
+  limits:
+  - max:
+      cpu: "4"
+      memory: 8Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+    default:
+      cpu: 500m
+      memory: 1Gi
+    defaultRequest:
+      cpu: 250m
+      memory: 512Mi
+    type: Container
+---
+# Staging Environment Resource Quota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: staging-quota
+  namespace: ai-agents-staging
+spec:
+  hard:
+    requests.cpu: "16"
+    requests.memory: 32Gi
+    limits.cpu: "32"
+    limits.memory: 64Gi
+    persistentvolumeclaims: "15"
+    services.loadbalancers: "3"
+    count/deployments.apps: "15"
+    count/jobs.batch: "30"
+---
+# Staging Environment Limit Range
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: staging-limits
+  namespace: ai-agents-staging
+spec:
+  limits:
+  - max:
+      cpu: "8"
+      memory: 16Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+    default:
+      cpu: 1
+      memory: 2Gi
+    defaultRequest:
+      cpu: 500m
+      memory: 1Gi
+    type: Container
+---
+# Production Environment Resource Quota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: prod-quota
+  namespace: ai-agents-prod
+spec:
+  hard:
+    requests.cpu: "32"
+    requests.memory: 64Gi
+    limits.cpu: "64"
+    limits.memory: 128Gi
+    persistentvolumeclaims: "20"
+    services.loadbalancers: "5"
+    count/deployments.apps: "20"
+    count/jobs.batch: "50"
+---
+# Production Environment Limit Range
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: prod-limits
+  namespace: ai-agents-prod
+spec:
+  limits:
+  - max:
+      cpu: "16"
+      memory: 32Gi
+    min:
+      cpu: 100m
+      memory: 128Mi
+    default:
+      cpu: 2
+      memory: 4Gi
+    defaultRequest:
+      cpu: 1
+      memory: 2Gi
+    type: Container

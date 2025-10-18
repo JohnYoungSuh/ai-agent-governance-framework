@@ -1,0 +1,235 @@
+---
+# Namespace for Monitoring
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-agents-monitoring
+  labels:
+    framework: ai-governance
+    purpose: monitoring
+---
+# Prometheus ServiceMonitor for Security Agent
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: security-agent-monitor
+  namespace: ai-agents-prod
+  labels:
+    app: security-agent
+    tier: "3"
+spec:
+  selector:
+    matchLabels:
+      app: security-agent
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+---
+# Prometheus ServiceMonitor for IT-Ops Agent
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: it-ops-agent-monitor
+  namespace: ai-agents-prod
+  labels:
+    app: it-ops-agent
+    tier: "3"
+spec:
+  selector:
+    matchLabels:
+      app: it-ops-agent
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+---
+# Prometheus ServiceMonitor for AI Agent
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ai-agent-monitor
+  namespace: ai-agents-prod
+  labels:
+    app: ai-agent
+    tier: "3"
+spec:
+  selector:
+    matchLabels:
+      app: ai-agent
+  endpoints:
+    - port: metrics
+      interval: 60s
+      path: /metrics
+---
+# Prometheus ServiceMonitor for Architect Agent
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: architect-agent-monitor
+  namespace: ai-agents-prod
+  labels:
+    app: architect-agent
+    tier: "4"
+spec:
+  selector:
+    matchLabels:
+      app: architect-agent
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+---
+# PrometheusRule for Agent Alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ai-agent-alerts
+  namespace: ai-agents-monitoring
+  labels:
+    framework: ai-governance
+spec:
+  groups:
+    - name: security-agent
+      interval: 30s
+      rules:
+        - alert: SecurityScanFailureRate
+          expr: rate(security_scan_errors[5m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+            agent: security-agent
+            tier: "3"
+          annotations:
+            summary: "Security scan failure rate > 10%"
+            description: "Security agent scan failure rate is {{ $value }} over the last 5 minutes"
+
+        - alert: HighCriticalVulnerabilities
+          expr: security_vulnerabilities_found{severity="CRITICAL"} > 5
+          for: 5m
+          labels:
+            severity: critical
+            agent: security-agent
+            tier: "3"
+          annotations:
+            summary: "Critical vulnerabilities detected"
+            description: "{{ $value }} critical vulnerabilities found"
+
+    - name: it-ops-agent
+      interval: 15s
+      rules:
+        - alert: ITOpsAgentDown
+          expr: up{app="it-ops-agent"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            agent: it-ops-agent
+            tier: "3"
+          annotations:
+            summary: "IT-Ops agent is down"
+            description: "IT-Ops agent has been down for 1 minute - incident response unavailable"
+
+        - alert: IncidentResponseSlow
+          expr: histogram_quantile(0.95, ops_response_time_seconds_bucket) > 300
+          for: 5m
+          labels:
+            severity: warning
+            agent: it-ops-agent
+            tier: "3"
+          annotations:
+            summary: "Incident response time degraded"
+            description: "P95 response time is {{ $value }}s (threshold: 300s)"
+
+        - alert: DeploymentFailureRate
+          expr: rate(ops_deployment_failures[10m]) > 0.2
+          for: 10m
+          labels:
+            severity: warning
+            agent: it-ops-agent
+            tier: "3"
+          annotations:
+            summary: "High deployment failure rate"
+            description: "Deployment failure rate is {{ $value }} over 10 minutes"
+
+    - name: ai-agent
+      interval: 60s
+      rules:
+        - alert: TrainingJobFailed
+          expr: ai_training_job_status == 0
+          for: 5m
+          labels:
+            severity: warning
+            agent: ai-agent
+            tier: "3"
+          annotations:
+            summary: "ML training job failed"
+            description: "AI agent training job has failed"
+
+        - alert: ModelAccuracyDrop
+          expr: ai_model_accuracy < 0.85
+          for: 10m
+          labels:
+            severity: warning
+            agent: ai-agent
+            tier: "3"
+          annotations:
+            summary: "Model accuracy below threshold"
+            description: "Model accuracy is {{ $value }} (threshold: 0.85)"
+
+    - name: architect-agent
+      interval: 30s
+      rules:
+        - alert: DesignReviewBacklog
+          expr: architect_pending_reviews > 10
+          for: 30m
+          labels:
+            severity: info
+            agent: architect-agent
+            tier: "4"
+          annotations:
+            summary: "Design review backlog growing"
+            description: "{{ $value }} pending design reviews"
+
+        - alert: ArchitectAgentResponseSlow
+          expr: histogram_quantile(0.95, architect_response_time_seconds_bucket) > 30
+          for: 10m
+          labels:
+            severity: warning
+            agent: architect-agent
+            tier: "4"
+          annotations:
+            summary: "Architect agent response degraded"
+            description: "P95 response time is {{ $value }}s (threshold: 30s)"
+
+    - name: governance
+      interval: 60s
+      rules:
+        - alert: BudgetExceeded
+          expr: agent_monthly_cost_dollars > agent_budget_limit_dollars
+          for: 5m
+          labels:
+            severity: critical
+            framework: ai-governance
+          annotations:
+            summary: "Agent {{ $labels.agent }} exceeded budget"
+            description: "Cost ${{ $value }} exceeds budget limit"
+
+        - alert: BudgetWarning
+          expr: (agent_monthly_cost_dollars / agent_budget_limit_dollars) > 0.8
+          for: 30m
+          labels:
+            severity: warning
+            framework: ai-governance
+          annotations:
+            summary: "Agent {{ $labels.agent }} at 80% budget"
+            description: "Current spend: ${{ $value }}"
+
+        - alert: GovernanceViolation
+          expr: rate(agent_governance_violations_total[1h]) > 0
+          for: 5m
+          labels:
+            severity: critical
+            framework: ai-governance
+          annotations:
+            summary: "Governance policy violation"
+            description: "Agent {{ $labels.agent }} violated governance policy"

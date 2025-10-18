@@ -38,6 +38,10 @@ Version 2.0 introduces major security, risk management, and multi-agent workflow
 - **[Workflow Framework](docs/PAR-WORKFLOW-FRAMEWORK.md)** - Enhanced PAR cycle with security gates
 - **[Governance & Policy](docs/GOVERNANCE-POLICY.md)** - Security, compliance, and ethical guidelines
 
+### Architecture & Deployment (NEW)
+- **[Kubernetes Deployment Guide](docs/KUBERNETES-DEPLOYMENT-GUIDE.md)** ⭐ - Complete K8s deployment with Helm charts and monitoring
+- **[Multi-Repo vs Monorepo Architecture](docs/MULTI-REPO-VS-MONOREPO-ARCHITECTURE.md)** ⭐ - Complete guide for extending framework to specialized agent services
+
 ### Risk Management (NEW in v2.0)
 - **[Risk Catalog](policies/risk-catalog.md)** ⭐ - 18 AI-specific risks with scoring
 - **[Mitigation Catalog](policies/mitigation-catalog.md)** ⭐ - 21 controls with implementation code
@@ -162,12 +166,30 @@ cp frameworks/observability-config.yml \
 ### Manual Deployment
 Follow the Quick Start guide above for local/manual agent deployment.
 
-### Infrastructure as Code (Terraform)
-For production deployments with full governance controls, see **[Terraform README](terraform/README.md)**:
-- AWS infrastructure with CloudWatch, DynamoDB, S3
+### Infrastructure as Code (Terraform - AWS Lambda)
+For serverless AWS deployments with full governance controls, see **[Terraform README](terraform/README.md)**:
+- AWS infrastructure with Lambda, CloudWatch, DynamoDB, S3
 - All 21 mitigation controls implemented
 - GitHub Actions integration
 - Estimated cost: $50-$575/month
+
+### Kubernetes Deployment
+For containerized deployments on Kubernetes clusters, see **[Kubernetes Deployment Guide](docs/KUBERNETES-DEPLOYMENT-GUIDE.md)**:
+- Complete Kubernetes manifests for 4 specialized agents
+- Helm charts with customizable values
+- Kustomize overlays for dev/staging/prod environments
+- Prometheus + Grafana monitoring stack
+- External Secrets Operator integration
+- NetworkPolicy and RBAC security
+- Estimated cost: $500-$1,600/month (K8s + AI costs)
+
+### Extending to Specialized Agent Services
+Planning to deploy multiple specialized agents (Security, IT-Ops, AI, Architect)? See the **[Multi-Repo vs Monorepo Architecture Guide](docs/MULTI-REPO-VS-MONOREPO-ARCHITECTURE.md)** for:
+- Complete comparison of multi-repo vs monorepo approaches
+- Detailed folder structures, Dockerfiles, and Kubernetes/Lambda manifests
+- CI/CD pipeline designs for GitHub Actions
+- Versioning strategy and secrets management
+- **Recommendation: Monorepo for small cross-functional teams**
 
 ## 📋 Agent Tier Overview
 

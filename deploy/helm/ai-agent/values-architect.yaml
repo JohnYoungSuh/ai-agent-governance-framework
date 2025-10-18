@@ -1,0 +1,260 @@
+# Architect Agent - Helm Values
+# Tier 4: Architect (Design & Research)
+# Runtime: Deployment (long-running API server for on-demand design reviews)
+
+agent:
+  name: architect-agent
+  tier: 4
+  type: architect
+  version: "1.0.0"
+  frameworkVersion: "2.1.0"
+
+image:
+  repository: ghcr.io/your-org/architect-agent
+  pullPolicy: Always
+  tag: "latest"
+
+# Long-running deployment (PRIMARY RUNTIME)
+replicaCount: 2
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 9090
+
+# Resources - Design and analysis tasks
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+    ephemeral-storage: 2Gi
+  limits:
+    cpu: 2
+    memory: 4Gi
+    ephemeral-storage: 5Gi
+
+# Auto-scaling for on-demand requests
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Persistence for design artifacts
+persistence:
+  enabled: true
+  storageClassName: standard
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  mountPath: /var/design-artifacts
+
+# No CronJob - this is a long-running service
+cronjob:
+  enabled: false
+
+# Agent-specific configuration
+config:
+  agentConfig: |
+    agent:
+      name: architect-agent
+      tier: 4
+      version: "1.0.0"
+      framework_version: "2.1.0"
+      description: "System design, technical evaluation, and architectural decisions"
+
+    capabilities:
+      system_design:
+        enabled: true
+        methodologies:
+          - microservices
+          - event-driven
+          - serverless
+          - monolith
+        tools:
+          - mermaid
+          - plantuml
+          - c4-model
+
+      technical_evaluation:
+        enabled: true
+        domains:
+          - cloud-architecture
+          - database-design
+          - api-design
+          - security-architecture
+          - scalability-analysis
+
+        evaluation_criteria:
+          - scalability
+          - reliability
+          - security
+          - cost
+          - maintainability
+          - performance
+
+      architectural_review:
+        enabled: true
+        review_types:
+          - design-review
+          - code-review
+          - security-review
+          - performance-review
+
+        approval_required: true
+        reviewers:
+          - architecture-team
+          - principal-engineers
+
+    integrations:
+      confluence:
+        enabled: true
+        space: architecture-docs
+        auto_publish: false
+
+      jira:
+        enabled: true
+        project: ARCH
+        ticket_type: Architecture Decision Record
+
+      github:
+        enabled: true
+        organization: your-org
+        auto_create_adr: true
+        adr_path: docs/adr/
+
+    design_patterns:
+      library_path: /var/design-artifacts/patterns
+      categories:
+        - creational
+        - structural
+        - behavioral
+        - cloud-native
+        - microservices
+
+    decision_records:
+      format: markdown
+      template: adr-template.md
+      storage: /var/design-artifacts/adr
+      versioning: true
+
+    observability:
+      metrics:
+        enabled: true
+        port: 9090
+      traces:
+        enabled: true
+        endpoint: http://jaeger-collector.ai-agents-monitoring:14268/api/traces
+      logs:
+        level: info
+        format: json
+
+# Environment variables
+env:
+  - name: AGENT_NAME
+    value: architect-agent
+  - name: AGENT_TIER
+    value: "4"
+  - name: FRAMEWORK_VERSION
+    value: "2.1.0"
+  - name: ENVIRONMENT
+    value: production
+  - name: RUNTIME_MODE
+    value: long-running
+
+# Secrets (managed by External Secrets Operator)
+secrets:
+  create: false
+  externalSecrets:
+    enabled: true
+    backend: aws-secrets-manager
+    secretStoreRef: aws-secret-store
+    dataFrom:
+      - extract:
+          key: ai-agents/prod/architect-agent
+
+# RBAC - Read-only access to most resources
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services", "configmaps"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "statefulsets"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["networking.k8s.io"]
+      resources: ["ingresses", "networkpolicies"]
+      verbs: ["get", "list", "watch"]
+
+# Governance
+governance:
+  budgetMonthly: 350
+  costCenter: architecture
+  approvers: architecture-team,cto
+  tier: 4
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheusRule:
+    enabled: true
+    rules:
+      - alert: DesignReviewBacklog
+        expr: architect_pending_reviews > 10
+        for: 30m
+        annotations:
+          summary: "Architecture review backlog growing"
+      - alert: HighCostDesignProposal
+        expr: architect_estimated_cost > 10000
+        for: 5m
+        annotations:
+          summary: "High-cost design proposal detected - review required"
+      - alert: ArchitectAgentResponseSlow
+        expr: architect_response_time_p95 > 30
+        for: 10m
+        annotations:
+          summary: "Architect agent response time degraded"
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Network Policy
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow requests from other agents and UI
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            framework: ai-governance
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow external API calls (Confluence, Jira, GitHub)
+    - to:
+      - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow internal services
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            framework: ai-governance

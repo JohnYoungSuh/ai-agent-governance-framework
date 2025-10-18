@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-agent.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ai-agent.labels" . | nindent 4 }}
+  annotations:
+    governance.ai/budget-monthly: "{{ .Values.governance.budgetMonthly }}"
+    governance.ai/cost-center: "{{ .Values.governance.costCenter }}"
+    governance.ai/approvers: "{{ .Values.governance.approvers }}"
+    governance.ai/tier: "{{ .Values.agent.tier }}"
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      {{- include "ai-agent.selectorLabels" . | nindent 6 }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.service.metricsPort }}"
+        prometheus.io/path: "/metrics"
+      labels:
+        {{- include "ai-agent.selectorLabels" . | nindent 8 }}
+        agent-type: {{ .Values.agent.type }}
+        framework-version: {{ .Values.agent.frameworkVersion | quote }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "ai-agent.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      initContainers:
+      - name: framework-init
+        image: busybox:1.36
+        command: ['sh', '-c', 'echo "Framework v{{ .Values.agent.frameworkVersion }} initialized" && sleep 2']
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.port }}
+          protocol: TCP
+        - name: metrics
+          containerPort: {{ .Values.service.metricsPort }}
+          protocol: TCP
+
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        {{- range .Values.env }}
+        - name: {{ .name }}
+          value: {{ .value | quote }}
+        {{- end }}
+
+        envFrom:
+        - configMapRef:
+            name: {{ include "ai-agent.fullname" . }}-config
+        {{- if .Values.secrets.create }}
+        - secretRef:
+            name: {{ include "ai-agent.fullname" . }}-secrets
+        {{- end }}
+
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 10 }}
+
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 10 }}
+
+        startupProbe:
+          {{- toYaml .Values.startupProbe | nindent 10 }}
+
+        volumeMounts:
+        - name: config
+          mountPath: /etc/{{ .Values.agent.name }}
+          readOnly: true
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          mountPath: {{ .Values.persistence.mountPath }}
+        {{- end }}
+        - name: tmp
+          mountPath: /tmp
+
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "ai-agent.fullname" . }}-config
+      {{- if .Values.persistence.enabled }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "ai-agent.fullname" . }}-data
+      {{- end }}
+      - name: tmp
+        emptyDir: {}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

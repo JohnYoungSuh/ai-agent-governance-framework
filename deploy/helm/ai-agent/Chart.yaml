@@ -1,0 +1,26 @@
+apiVersion: v2
+name: ai-agent
+description: A Helm chart for AI Agent Governance Framework agents
+type: application
+version: 1.0.0
+appVersion: "2.1.0"
+
+keywords:
+  - ai
+  - governance
+  - agent
+  - kubernetes
+
+home: https://github.com/your-org/ai-agent-governance-framework
+sources:
+  - https://github.com/your-org/ai-agent-governance-framework
+
+maintainers:
+  - name: AI Governance Team
+    email: youngs@suhlabs.com
+
+dependencies: []
+
+annotations:
+  framework.ai-governance/version: "2.1.0"
+  framework.ai-governance/tier-support: "1,2,3,4"
