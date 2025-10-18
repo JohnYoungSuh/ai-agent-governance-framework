@@ -1,0 +1,413 @@
+name: Schema Validation
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - 'policies/schemas/**'
+      - 'examples/**/*.json'
+      - 'agents/**/audit/**'
+      - '.github/workflows/schema-validation.yml'
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - 'policies/schemas/**'
+      - 'examples/**/*.json'
+      - 'agents/**/audit/**'
+  workflow_dispatch:
+
+env:
+  SCHEMA_DIR: policies/schemas
+
+jobs:
+  # ============================================================================
+  # Job 1: Validate JSON Schema Syntax
+  # ============================================================================
+  validate-schemas:
+    name: Validate Schema Syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema check-jsonschema
+
+      - name: Validate audit-trail.json schema
+        run: |
+          echo "🔍 Validating audit-trail.json schema syntax..."
+          check-jsonschema --check-metaschema ${{ env.SCHEMA_DIR }}/audit-trail.json
+          echo "✅ audit-trail.json schema is valid"
+
+      - name: Validate siem-event.json schema
+        run: |
+          echo "🔍 Validating siem-event.json schema syntax..."
+          check-jsonschema --check-metaschema ${{ env.SCHEMA_DIR }}/siem-event.json
+          echo "✅ siem-event.json schema is valid"
+
+      - name: Validate agent-cost-record.json schema
+        run: |
+          echo "🔍 Validating agent-cost-record.json schema syntax..."
+          check-jsonschema --check-metaschema ${{ env.SCHEMA_DIR }}/agent-cost-record.json
+          echo "✅ agent-cost-record.json schema is valid"
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "=========================================="
+          echo "✅ All schema syntax validations passed"
+          echo "=========================================="
+
+  # ============================================================================
+  # Job 2: Validate Example JSON Files Against Schemas
+  # ============================================================================
+  validate-examples:
+    name: Validate Example Records
+    runs-on: ubuntu-latest
+    needs: validate-schemas
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema
+
+      - name: Find and validate audit trail examples
+        run: |
+          echo "🔍 Finding audit trail example files..."
+
+          AUDIT_EXAMPLES=$(find examples/control-validation -name "*Audit-trail.json" -o -name "*governace_record.json" 2>/dev/null || true)
+
+          if [ -z "$AUDIT_EXAMPLES" ]; then
+            echo "⚠️  No audit trail examples found to validate"
+          else
+            echo "Found audit trail examples:"
+            echo "$AUDIT_EXAMPLES"
+            echo ""
+
+            for file in $AUDIT_EXAMPLES; do
+              echo "Validating: $file"
+              if jsonschema -i "$file" ${{ env.SCHEMA_DIR }}/audit-trail.json; then
+                echo "✅ $file is valid"
+              else
+                echo "❌ $file validation failed"
+                exit 1
+              fi
+              echo ""
+            done
+          fi
+
+      - name: Validate cost record examples (if any)
+        run: |
+          echo "🔍 Finding cost record example files..."
+
+          COST_EXAMPLES=$(find examples templates -name "*cost*.json" 2>/dev/null || true)
+
+          if [ -z "$COST_EXAMPLES" ]; then
+            echo "ℹ️  No cost record examples found (this is OK)"
+          else
+            echo "Found cost record examples:"
+            echo "$COST_EXAMPLES"
+            echo ""
+
+            for file in $COST_EXAMPLES; do
+              # Skip if file is the schema itself
+              if [[ "$file" == *"schemas"* ]]; then
+                continue
+              fi
+
+              echo "Validating: $file"
+              if jsonschema -i "$file" ${{ env.SCHEMA_DIR }}/agent-cost-record.json; then
+                echo "✅ $file is valid"
+              else
+                echo "⚠️  $file validation failed (may not be a cost record)"
+              fi
+              echo ""
+            done
+          fi
+
+      - name: Validate audit records in agents directory
+        run: |
+          echo "🔍 Finding agent audit records..."
+
+          AGENT_AUDITS=$(find agents -path "*/audit/*.json" 2>/dev/null || true)
+
+          if [ -z "$AGENT_AUDITS" ]; then
+            echo "ℹ️  No agent audit records found (agents not yet deployed)"
+          else
+            echo "Found agent audit records:"
+            echo "$AGENT_AUDITS"
+            echo ""
+
+            for file in $AGENT_AUDITS; do
+              echo "Validating: $file"
+              if jsonschema -i "$file" ${{ env.SCHEMA_DIR }}/audit-trail.json; then
+                echo "✅ $file is valid"
+              else
+                echo "❌ $file validation failed"
+                exit 1
+              fi
+              echo ""
+            done
+          fi
+
+  # ============================================================================
+  # Job 3: OCSF Mapping Validation for SIEM Events
+  # ============================================================================
+  validate-ocsf-mapping:
+    name: Validate OCSF Mappings
+    runs-on: ubuntu-latest
+    needs: validate-schemas
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema jq
+
+      - name: Validate OCSF mapping requirements
+        run: |
+          echo "🔍 Validating OCSF mapping in siem-event.json schema..."
+
+          # Check that siem-event.json schema includes ocsf_mapping
+          if grep -q "ocsf_mapping" ${{ env.SCHEMA_DIR }}/siem-event.json; then
+            echo "✅ OCSF mapping field present in schema"
+          else
+            echo "❌ OCSF mapping field missing from schema"
+            exit 1
+          fi
+
+          # Check required OCSF fields
+          REQUIRED_FIELDS=("category_uid" "class_uid" "severity_id")
+
+          for field in "${REQUIRED_FIELDS[@]}"; do
+            if grep -q "\"$field\"" ${{ env.SCHEMA_DIR }}/siem-event.json; then
+              echo "✅ OCSF field '$field' present"
+            else
+              echo "❌ OCSF field '$field' missing"
+              exit 1
+            fi
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "✅ OCSF mapping validation passed"
+          echo "=========================================="
+
+  # ============================================================================
+  # Job 4: Schema Compatibility Check
+  # ============================================================================
+  schema-compatibility:
+    name: Schema Compatibility Check
+    runs-on: ubuntu-latest
+    needs: validate-schemas
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+        with:
+          path: current
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Check for breaking schema changes
+        run: |
+          echo "🔍 Checking for breaking schema changes..."
+          echo "Base branch: ${{ github.base_ref }}"
+          echo "Current branch: ${{ github.head_ref }}"
+          echo ""
+
+          BREAKING_CHANGES=0
+
+          for schema in audit-trail.json siem-event.json agent-cost-record.json; do
+            if [ ! -f "base/${{ env.SCHEMA_DIR }}/$schema" ]; then
+              echo "✅ New schema: $schema (no compatibility check needed)"
+              continue
+            fi
+
+            echo "Checking compatibility for: $schema"
+
+            # Compare required fields
+            BASE_REQUIRED=$(jq -r '.required[]?' "base/${{ env.SCHEMA_DIR }}/$schema" | sort)
+            CURRENT_REQUIRED=$(jq -r '.required[]?' "current/${{ env.SCHEMA_DIR }}/$schema" | sort)
+
+            # Check if any required fields were removed
+            REMOVED_FIELDS=$(comm -23 <(echo "$BASE_REQUIRED") <(echo "$CURRENT_REQUIRED"))
+
+            if [ -n "$REMOVED_FIELDS" ]; then
+              echo "❌ Breaking change detected in $schema:"
+              echo "   Removed required fields: $REMOVED_FIELDS"
+              BREAKING_CHANGES=1
+            else
+              echo "✅ No breaking changes in $schema"
+            fi
+            echo ""
+          done
+
+          if [ $BREAKING_CHANGES -eq 1 ]; then
+            echo "=========================================="
+            echo "❌ Breaking schema changes detected"
+            echo "=========================================="
+            echo ""
+            echo "Breaking changes require:"
+            echo "  1. Semantic versioning bump (major version)"
+            echo "  2. Migration plan for existing data"
+            echo "  3. Approval from framework maintainers"
+            exit 1
+          else
+            echo "=========================================="
+            echo "✅ No breaking schema changes detected"
+            echo "=========================================="
+          fi
+
+  # ============================================================================
+  # Job 5: Generate Schema Documentation
+  # ============================================================================
+  generate-docs:
+    name: Generate Schema Documentation
+    runs-on: ubuntu-latest
+    needs: [validate-schemas, validate-examples]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JSON Schema tools
+        run: |
+          npm install -g json-schema-to-markdown
+
+      - name: Generate markdown documentation
+        run: |
+          echo "📝 Generating schema documentation..."
+
+          mkdir -p docs/schemas
+
+          for schema in ${{ env.SCHEMA_DIR }}/*.json; do
+            schema_name=$(basename "$schema" .json)
+            echo "Generating docs for: $schema_name"
+
+            # Create simple markdown documentation
+            cat > "docs/schemas/${schema_name}.md" <<EOF
+          # ${schema_name} Schema
+
+          **Path:** \`$schema\`
+
+          **Last Updated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## Schema Definition
+
+          \`\`\`json
+          $(cat "$schema" | jq '.')
+          \`\`\`
+
+          ## Required Fields
+
+          $(jq -r '.required[]?' "$schema" | sed 's/^/- /')
+
+          ## Purpose
+
+          $(jq -r '.description // "No description available"' "$schema")
+
+          ## Example
+
+          See: \`examples/control-validation/\` for usage examples
+          EOF
+
+            echo "✅ Generated: docs/schemas/${schema_name}.md"
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "✅ Schema documentation generated"
+          echo "=========================================="
+
+      - name: Commit documentation (if changed)
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add docs/schemas/*.md || true
+
+          if git diff --staged --quiet; then
+            echo "No documentation changes to commit"
+          else
+            git commit -m "docs: Update schema documentation [skip ci]"
+            git push
+            echo "✅ Documentation committed and pushed"
+          fi
+
+  # ============================================================================
+  # Job 6: Summary Report
+  # ============================================================================
+  summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [validate-schemas, validate-examples, validate-ocsf-mapping]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "=========================================="
+          echo "Schema Validation Summary"
+          echo "=========================================="
+          echo ""
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          echo "Job Results:"
+          echo "  - Schema Syntax:       ${{ needs.validate-schemas.result }}"
+          echo "  - Example Validation:  ${{ needs.validate-examples.result }}"
+          echo "  - OCSF Mapping:        ${{ needs.validate-ocsf-mapping.result }}"
+          echo ""
+
+          if [[ "${{ needs.validate-schemas.result }}" == "success" ]] && \
+             [[ "${{ needs.validate-examples.result }}" == "success" ]] && \
+             [[ "${{ needs.validate-ocsf-mapping.result }}" == "success" ]]; then
+            echo "✅ All validation checks passed"
+            echo "=========================================="
+            exit 0
+          else
+            echo "❌ Some validation checks failed"
+            echo "=========================================="
+            exit 1
+          fi
