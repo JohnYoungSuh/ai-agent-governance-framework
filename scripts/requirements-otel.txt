@@ -1,0 +1,29 @@
+# OpenTelemetry Dependencies
+# AI Agent Governance Framework v2.1
+# Control: AU-002, AU-012, G-03
+
+# Core OpenTelemetry
+opentelemetry-api>=1.21.0
+opentelemetry-sdk>=1.21.0
+
+# OTLP Exporters (HTTP/gRPC)
+opentelemetry-exporter-otlp-proto-http>=1.21.0
+opentelemetry-exporter-otlp-proto-grpc>=1.21.0
+
+# Instrumentation Libraries (optional)
+opentelemetry-instrumentation-requests>=0.42b0
+opentelemetry-instrumentation-boto3>=0.42b0
+
+# JSON Schema validation
+jsonschema>=4.17.0
+
+# For Jira integration
+cryptography>=41.0.0
+requests>=2.31.0
+
+# For Redis caching (webhook receiver)
+redis>=5.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-mock>=3.11.0

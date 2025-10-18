@@ -1,0 +1,29 @@
+{
+  "siem_event_id": "audit-test-009",
+  "timestamp": "2025-10-18T17:28:25.761716+00:00",
+  "source": "jira",
+  "control_id": "APP-001",
+  "agent_id": "deployment-agent",
+  "tier": 3,
+  "payload": {
+    "description": "Jira CR approval validated",
+    "event_type": "authentication",
+    "resource_arn": null
+  },
+  "compliance_result": "pass",
+  "ocsf_mapping": {
+    "category_uid": 3,
+    "class_uid": 3001,
+    "severity_id": 1,
+    "activity_id": 1
+  },
+  "metadata": {
+    "environment": "test",
+    "correlation_id": "audit-test-009"
+  },
+  "jira_reference": {
+    "cr_id": "CR-2025-1044",
+    "approver_role": "Change Manager",
+    "status": "Approved"
+  }
+}

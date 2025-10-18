@@ -1,0 +1,29 @@
+{
+  "siem_event_id": "audit-test-001",
+  "timestamp": "2025-10-18T17:28:25.370450+00:00",
+  "source": "audit-trail",
+  "control_id": "SEC-001",
+  "agent_id": "test-agent",
+  "tier": 3,
+  "payload": {
+    "description": "KMS key rotation enabled",
+    "event_type": "compliance_check",
+    "resource_arn": null
+  },
+  "compliance_result": "pass",
+  "ocsf_mapping": {
+    "category_uid": 2,
+    "class_uid": 2001,
+    "severity_id": 1,
+    "activity_id": 1
+  },
+  "metadata": {
+    "environment": "test",
+    "correlation_id": "audit-test-001"
+  },
+  "jira_reference": {
+    "cr_id": "CR-2025-1042",
+    "approver_role": "Change Manager",
+    "status": "Approved"
+  }
+}

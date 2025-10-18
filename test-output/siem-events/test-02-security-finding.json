@@ -1,0 +1,24 @@
+{
+  "siem_event_id": "audit-test-002",
+  "timestamp": "2025-10-18T17:28:25.421358+00:00",
+  "source": "infra",
+  "control_id": "SEC-001",
+  "agent_id": "security-agent",
+  "tier": 3,
+  "payload": {
+    "description": "Unencrypted S3 bucket detected",
+    "event_type": "security_finding",
+    "resource_arn": "arn:aws:s3:::my-bucket"
+  },
+  "compliance_result": "fail",
+  "ocsf_mapping": {
+    "category_uid": 2,
+    "class_uid": 2004,
+    "severity_id": 4,
+    "activity_id": 2
+  },
+  "metadata": {
+    "environment": "test",
+    "correlation_id": "audit-test-002"
+  }
+}

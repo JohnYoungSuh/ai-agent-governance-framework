@@ -1,0 +1,29 @@
+{
+  "siem_event_id": "audit-test-003",
+  "timestamp": "2025-10-18T17:28:25.467750+00:00",
+  "source": "infra",
+  "control_id": "SEC-001",
+  "agent_id": "ops-agent",
+  "tier": 4,
+  "payload": {
+    "description": "IAM role policy updated",
+    "event_type": "iam_change",
+    "resource_arn": "arn:aws:iam::123456789012:role/ai-agent-role"
+  },
+  "compliance_result": "pass",
+  "ocsf_mapping": {
+    "category_uid": 3,
+    "class_uid": 3005,
+    "severity_id": 3,
+    "activity_id": 3
+  },
+  "metadata": {
+    "environment": "test",
+    "correlation_id": "audit-test-003"
+  },
+  "jira_reference": {
+    "cr_id": "CR-2025-1043",
+    "approver_role": "Change Manager",
+    "status": "Approved"
+  }
+}
