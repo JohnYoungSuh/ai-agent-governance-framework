@@ -1,23 +1,66 @@
 {
-  "audit_id": "4d2e1f9a-8c77-4a9b-9b3e-7f6a5d4c3b2a",
-  "timestamp": "2025-10-15T11:57:00Z",
-  "actor": "ai-ops-agent-01",
-  "action": "credential_checkin",
-  "workflow_step": "SEC-001",
-  "jira_reference": {
-    "cr_id": "CR-2025-1042",
-    "approver_role": "Change Manager",
-    "budget_tokens": 500,
-    "controls": ["SEC-001"]
-  },
-  "inputs": {
-    "lease_id": "lease-xyz-123"
-  },
-  "outputs": {
-    "status": "released"
-  },
-  "policy_controls_checked": ["SEC-001"],
-  "compliance_result": "pass",
-  "evidence_hash": "sha256:efgh5678...",
-  "auditor_agent": "AUD-001"
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Audit Trail Record",
+  "type": "object",
+  "required": [
+    "audit_id",
+    "timestamp",
+    "actor",
+    "action",
+    "workflow_step",
+    "compliance_result"
+  ],
+  "properties": {
+    "audit_id": {
+      "type": "string",
+      "description": "Unique identifier for this audit record (UUID)."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of the event."
+    },
+    "actor": {
+      "type": "string",
+      "description": "Agent, user, or system performing the action."
+    },
+    "action": {
+      "type": "string",
+      "description": "Action performed (e.g., credential_checkout, credential_checkin)."
+    },
+    "workflow_step": {
+      "type": "string",
+      "description": "Control or workflow step identifier (e.g., SEC-001)."
+    },
+    "jira_reference": {
+      "type": "object",
+      "properties": {
+        "cr_id": { "type": "string" },
+        "approver_role": { "type": "string" },
+        "budget_tokens": { "type": "integer" },
+        "controls": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "inputs": { "type": "object" },
+    "outputs": { "type": "object" },
+    "policy_controls_checked": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "compliance_result": {
+      "type": "string",
+      "enum": ["pass", "fail", "warning"]
+    },
+    "evidence_hash": {
+      "type": "string",
+      "description": "Hash of evidence artifacts."
+    },
+    "auditor_agent": {
+      "type": "string",
+      "description": "Agent responsible for validation."
+    }
+  }
 }
