@@ -278,6 +278,6 @@ output "next_steps" {
        ${var.enable_pii_redaction ? "✅" : "❌"} PII Redaction
        ${var.enable_prompt_injection_detection ? "✅" : "❌"} Prompt Injection Detection
 
-    For support: https://github.com/suhlabs/ai-agent-governance-framework
+    For support: Contact internal governance team at youngs@suhlabs.com
   EOT
 }

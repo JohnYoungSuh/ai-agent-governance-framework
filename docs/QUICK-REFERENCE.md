@@ -1,4 +1,4 @@
-# AI Agent Governance Framework v2.0 - Quick Reference
+# AI Agent Governance Framework - Internal v2.1 - Quick Reference
 
 > **Print and keep handy for daily agent operations**
 

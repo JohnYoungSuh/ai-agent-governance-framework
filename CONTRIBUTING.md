@@ -1,30 +1,29 @@
-# Contributing to AI Agent Governance Framework
+# Contributing to AI Agent Governance Framework - Internal
 
-Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
+Thank you for your interest in contributing! This document provides guidelines for contributing to the internal repository.
 
 ## How to Contribute
 
 ### 1. Report Issues
-- Use GitHub Issues for bug reports and feature requests
+- Use internal issue tracker for bug reports and feature requests
 - Provide clear descriptions and examples
 - Include relevant context (agent tier, use case, etc.)
 
 ### 2. Suggest Enhancements
-- Open a discussion in GitHub Discussions first
+- Open a discussion in internal communications channels first
 - Describe the problem and proposed solution
 - Consider impact on existing deployments
 
-### 3. Submit Pull Requests
+### 3. Submit Changes
 
-**Process:**
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Make your changes
+**Process (No forking required for internal repo):**
+1. Create a feature branch (`git checkout -b feature/your-feature`)
+2. Make your changes
 4. Add tests/examples if applicable
 5. Update documentation
-6. Commit with clear messages (`git commit -m 'Add feature: X'`)
-7. Push to your fork (`git push origin feature/your-feature`)
-8. Open a Pull Request
+3. Commit with clear messages (`git commit -m 'Add feature: X'`)
+4. Push to feature branch (`git push origin feature/your-feature`)
+5. Open a Pull Request to master
 
 **PR Guidelines:**
 - One feature/fix per PR
@@ -76,8 +75,14 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ## Questions?
 
-- Open a [Discussion](https://github.com/JohnYoungSuh/ai-agent-governance-framework/discussions)
+- Use internal communications channels
 - Tag issues with `question`
-- Reach out to maintainers
+- Reach out to internal governance team at youngs@suhlabs.com
+
+## Upstream Contributions
+
+To contribute improvements back to the public repository:
+- Submit PRs to: https://github.com/JohnYoungSuh/ai-agent-governance-framework
+- Follow standard fork-based contribution workflow
 
 Thank you for contributing! 🎉

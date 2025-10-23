@@ -1,6 +1,8 @@
-# AI Agent Governance Framework v2.1
+# AI Agent Governance Framework - Internal v2.1
 
 A comprehensive, risk-based framework for deploying, governing, and managing AI agents as autonomous team members using the **Problem → Action → Results (PAR)** model.
+
+**Internal Repository**: This is a private fork customized for internal use.
 
 ## 🎯 Overview
 
@@ -169,8 +171,8 @@ ai-agent-governance-framework/
 
 ```bash
 # Clone the repository
-git clone https://github.com/JohnYoungSuh/ai-agent-governance-framework.git
-cd ai-agent-governance-framework
+git clone https://github.com/JohnYoungSuh/ai-agent-governance-framework-internal.git
+cd ai-agent-governance-framework-internal
 
 # Read the quick reference guide
 cat docs/QUICK-REFERENCE.md
@@ -387,9 +389,10 @@ This framework (v2.1) aligns with and incorporates best practices from:
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/JohnYoungSuh/ai-agent-governance-framework/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/JohnYoungSuh/ai-agent-governance-framework/discussions)
+- **Issues**: Internal issue tracker
+- **Discussions**: Internal communications channels
 - **Email**: youngs@suhlabs.com
+- **Upstream**: [Public Repository](https://github.com/JohnYoungSuh/ai-agent-governance-framework)
 
 ## ✅ Verification & Evidence
 
