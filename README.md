@@ -58,6 +58,12 @@ Version 2.1 introduces enterprise-grade compliance, production deployment option
 - **[Kubernetes Deployment Guide](docs/KUBERNETES-DEPLOYMENT-GUIDE.md)** ⭐ - Complete K8s deployment with Helm charts and monitoring
 - **[Multi-Repo vs Monorepo Architecture](docs/MULTI-REPO-VS-MONOREPO-ARCHITECTURE.md)** ⭐ - Complete guide for extending framework to specialized agent services
 
+### DevContainer Patterns
+- **[Devcontainer Vendor Image Workflow](docs/DEVCONTAINER-VENDOR-IMAGE-WORKFLOW.md)** - Using vendor images for efficiency
+- **[Devcontainer Governance Integration](docs/DEVCONTAINER-GOVERNANCE-INTEGRATION.md)** - Governance alignment and token accountability
+- **[Devcontainer Quick Start](docs/DEVCONTAINER-QUICKSTART.md)** - Quick setup guide
+- **[Devcontainer Debugging Patterns](docs/DEVCONTAINER-DEBUGGING-PATTERNS.md)** ⭐ **NEW** - AI agent patterns for debugging vendor image issues
+
 ### Risk Management (v2.0)
 - **[Risk Catalog](policies/risk-catalog.md)** ⭐ - 18 AI-specific risks with scoring
 - **[Mitigation Catalog](policies/mitigation-catalog.md)** ⭐ - 21 controls with implementation code
@@ -66,6 +72,7 @@ Version 2.1 introduces enterprise-grade compliance, production deployment option
 ### Compliance & Security (NEW in v2.1)
 - **[Compliance Documentation](compliance/README.md)** ⭐ - Authority to Operate (ATO) and regulatory compliance
 - **[System Security Plan (SSP)](compliance/ssp/README.md)** ⭐ - NIST 800-53 Rev 5 control implementation (88% complete)
+- **[AI Agent Safety Policies](policies/agent-safety-policies.md)** ⭐ **NEW** - Mandatory safety protocols for destructive operations
 - **[Control Mappings](policies/control-mappings.md)** - NIST 800-53 → CCI → Framework mappings (FedRAMP, SOC 2, ISO 27001)
 - **[Logging Policy](policies/logging-policy.md)** - Complete AU family implementation with SIEM integration
 - **[Schemas](policies/schemas/)** - JSON schemas for audit trails, SIEM events, and cost records
@@ -91,6 +98,7 @@ ai-agent-governance-framework/
 ├── policies/                      # Policy documents
 │   ├── risk-catalog.md            # ⭐ 18 AI-specific risks (NEW)
 │   ├── mitigation-catalog.md      # ⭐ 21 controls with code (NEW)
+│   ├── agent-safety-policies.md   # ⭐ AI agent safety protocols (NEW)
 │   ├── control-mappings.md        # ⭐ NIST 800-53 → CCI mappings (NEW)
 │   ├── logging-policy.md          # ⭐ AU family implementation (NEW)
 │   ├── security-policies.md       # Security requirements
