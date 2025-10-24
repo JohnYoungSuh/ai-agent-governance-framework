@@ -229,6 +229,100 @@ chown -R splunk:splunk /opt/splunk/var || true
 
 ---
 
+### 6. Configure Passwordless Sudo for Vendor Users (When Needed)
+
+**Problem:** Vendor containers often run initialization tasks (Ansible, setup scripts) that need elevated privileges but run as non-root user.
+
+**Symptom:**
+```
+TASK [some_init_task] ***
+fatal: [localhost]: FAILED! => {
+  "msg": "sudo: a password is required"
+}
+```
+
+**Detection:**
+```bash
+# Check who's running
+docker exec <container> whoami
+
+# Check sudo permissions
+docker exec <container> sudo -l
+```
+
+**Solution:**
+
+Add to Dockerfile (build-time):
+```dockerfile
+USER root
+RUN echo "<vendor-user> ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/<vendor-user> \
+    && chmod 0440 /etc/sudoers.d/<vendor-user>
+USER <vendor-user>
+```
+
+**When to Apply:**
+
+| Vendor | User | Needs Sudo | Reason |
+|--------|------|-----------|--------|
+| Splunk | `splunk` | ✅ Yes | Ansible tasks (chown, chmod) |
+| Jenkins | `jenkins` | ⚠️ Sometimes | Plugin installation |
+| Nginx | `nginx` | ✅ Yes | Port 80 binding (or use CAP_NET_BIND_SERVICE) |
+| Postgres | `postgres` | ❌ No | Pre-configured |
+
+**Security Note:** Passwordless sudo is acceptable in DevContainer environments (not production). Limit to specific vendors or commands if concerned.
+
+**Key Principle:** Vendor initialization scripts may need sudo; configure it in Dockerfile if you see "password required" errors.
+
+---
+
+### 7. Use Active Monitoring for Async Initialization
+
+**Problem:** Many vendor containers initialize asynchronously (Ansible, database setup, cluster formation). Single log checks miss errors that occur mid-process.
+
+**Anti-pattern:**
+```bash
+# ❌ Single check misses errors during initialization
+docker logs <container> | grep ERROR
+```
+
+**Correct Pattern:**
+```bash
+# ✅ Monitor continuously during critical initialization window
+docker logs -f <container> 2>&1 | tee /tmp/init-log.txt &
+MONITOR_PID=$!
+sleep <initialization_duration>  # e.g., 30s for Splunk, 10s for Postgres
+kill $MONITOR_PID
+
+# Search for failures
+grep -iE "fatal|failed|error|permission denied|timeout" /tmp/init-log.txt
+```
+
+**Trigger Words to Watch:**
+- `fatal`, `FAILED!`, `error`
+- `permission denied`
+- `sudo: a password is required`
+- `timeout`, `connection refused`
+- `initialization failed`
+
+**Initialization Durations by Vendor:**
+
+| Vendor | Typical Duration | What's Happening |
+|--------|-----------------|------------------|
+| Splunk | ~30 seconds | Ansible playbooks, first-boot setup |
+| Postgres | ~10 seconds | Database initialization, user creation |
+| Jenkins | ~60 seconds | Plugin installation, configuration |
+| Elasticsearch | ~20 seconds | Cluster formation, index creation |
+| Redis | ~5 seconds | Configuration loading, AOF recovery |
+
+**When to Use:**
+- After `docker run` or DevContainer rebuild
+- When logs show initialization steps
+- When vendor documentation mentions first-boot process
+
+**Key Principle:** Active monitoring during async initialization catches errors that passive checking misses.
+
+---
+
 ## AI Agent Diagnostic Workflow
 
 ### Phase 1: Reconnaissance (Before Proposing Solution)
@@ -250,11 +344,19 @@ docker inspect <container> | jq '.[0].Config.Image'
 # Check entrypoint override
 docker inspect <container> | jq '.[0].Config.Entrypoint'
 
-# Check logs for vendor initialization
-docker logs -f <container> 2>&1 | head -100
+# ✅ CRITICAL: Active monitoring for initialization (not just one-time check)
+docker logs -f <container> 2>&1 | tee /tmp/init-log.txt &
+MONITOR_PID=$!
+sleep 30  # Monitor full initialization cycle
+kill $MONITOR_PID
+grep -iE "fatal|failed|error|permission|sudo" /tmp/init-log.txt
 
 # Check critical paths inside container
 docker exec <container> stat -c '%U:%G %a %n' <critical-path>
+
+# Check sudo permissions (if initialization failures occur)
+docker exec <container> whoami
+docker exec <container> sudo -l
 ```
 
 ---
@@ -386,14 +488,31 @@ become_user = splunk
 **Dockerfile (concise recommended):**
 ```dockerfile
 FROM splunk/splunk:latest
-ARG SPLUNK_UID=41812 SPLUNK_GID=41812
+
+# Build-time arguments (defaults kept for reproducible ownership)
+ARG SPLUNK_USER=splunk
+ARG SPLUNK_UID=41812
+ARG SPLUNK_GID=41812
+
+# Install development tools as root
 USER root
-RUN microdnf install -y git vim wget net-tools iproute && microdnf clean all
-RUN mkdir -p /opt/splunk/etc/apps/SA-SEC-eMASS /opt/splunk/tmp \
- && chown -R ${SPLUNK_UID}:${SPLUNK_GID} /opt/splunk/etc/apps/SA-SEC-eMASS /opt/splunk/tmp \
- && chmod 700 /opt/splunk/tmp
-USER splunk
-# Do not override ENTRYPOINT or CMD
+RUN microdnf install -y git wget net-tools iproute sudo && microdnf clean all
+
+# Configure passwordless sudo for splunk user (required for Ansible)
+RUN echo "splunk ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/splunk \
+    && chmod 0440 /etc/sudoers.d/splunk
+
+# Create application and runtime directories and set ownership/permissions
+RUN mkdir -p /opt/splunk/etc/apps/SA-SEC-eMASS \
+    && mkdir -p /opt/splunk/tmp \
+    && chown -R ${SPLUNK_UID}:${SPLUNK_GID} /opt/splunk/etc/apps/SA-SEC-eMASS \
+    && chown -R ${SPLUNK_UID}:${SPLUNK_GID} /opt/splunk/tmp \
+    && chmod 700 /opt/splunk/tmp
+
+# Switch to splunk user for normal runtime
+USER ${SPLUNK_USER}
+
+# Do not override ENTRYPOINT or CMD from the vendor image
 ```
 
 ### Verification Steps

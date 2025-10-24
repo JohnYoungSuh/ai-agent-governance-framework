@@ -395,6 +395,79 @@ docker exec <container> cat /path/to/config
 4. ✅ Rollback the change
 5. ✅ Report failure to user with diagnostics
 
+### Vendor Container Initialization (CRITICAL)
+
+**Problem:** Vendor containers (Splunk, Postgres, Jenkins, etc.) initialize asynchronously. Passive checks miss critical errors.
+
+**Mandatory Active Monitoring:**
+
+```bash
+# ❌ WRONG: Single check misses async initialization errors
+docker logs <container> | grep ERROR
+
+# ✅ CORRECT: Monitor full initialization cycle
+docker logs -f <container> 2>&1 | tee /tmp/init-log.txt &
+MONITOR_PID=$!
+sleep <init_duration>  # e.g., 30s for Splunk, 10s for Postgres
+kill $MONITOR_PID
+
+# Check for failures
+grep -iE "fatal|failed|error|permission denied|sudo.*required" /tmp/init-log.txt
+```
+
+**Initialization Durations:**
+
+| Vendor | Duration | Critical Events to Watch |
+|--------|----------|-------------------------|
+| Splunk | ~30s | Ansible tasks, first-boot setup |
+| Postgres | ~10s | Database initialization |
+| Jenkins | ~60s | Plugin installation |
+| Elasticsearch | ~20s | Cluster formation |
+
+**Specific Checks for Vendor Containers:**
+
+```bash
+# ✅ Monitor logs for full initialization cycle (30+ seconds)
+docker logs -f <container> 2>&1 | tee /tmp/init-log.txt &
+
+# ✅ Check for sudo/permission errors in init tasks
+grep -i "sudo.*password required" /tmp/init-log.txt
+
+# ✅ Verify service status, not just container running
+docker exec <container> <vendor-command> status
+# Examples:
+#   splunk status
+#   systemctl status postgresql
+#   jenkins-cli version
+
+# ✅ Test workspace file access from correct user
+docker exec <container> whoami
+docker exec <container> ls -la /workspace
+
+# ✅ Confirm ports are accessible (not just open)
+curl -I http://localhost:<port>  # Check for HTTP response
+nc -zv localhost:<port>           # Check for connection
+```
+
+**Common Vendor Init Errors:**
+
+| Error Pattern | Cause | Fix |
+|--------------|-------|-----|
+| `sudo: a password is required` | Non-root user needs elevated privileges | Add passwordless sudo in Dockerfile |
+| `Permission denied: /var/lib/<vendor>` | Volume ownership mismatch | Add `chown` to postStartCommand |
+| `initialization timeout` | Init takes longer than expected | Increase monitoring duration |
+| `connection refused` | Service not fully started | Wait longer before checks |
+
+**Before Declaring DevContainer "Working":**
+
+- [ ] Monitor logs for full initialization cycle (30+ seconds)
+- [ ] Check for sudo/permission errors in init tasks
+- [ ] Verify service status (not just container running)
+- [ ] Test workspace file access from correct user
+- [ ] Confirm ports are accessible (curl/nc check)
+- [ ] Validate vendor-specific health endpoints
+- [ ] Check that vendor CLI commands work
+
 ---
 
 ## Decision Tree for AI Agents
