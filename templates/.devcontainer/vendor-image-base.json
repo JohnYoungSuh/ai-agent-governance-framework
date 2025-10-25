@@ -1,0 +1,53 @@
+{
+  "// TEMPLATE": "Devcontainer using vendor base image without generation",
+  "// REPLACE": "All {{PLACEHOLDER}} values before use",
+
+  "name": "{{PROJECT_NAME}} - Development",
+
+  "// ✅ BASE IMAGE": [
+    "Using {{BASE_IMAGE}} from trusted registry",
+    "Pin by digest for reproducibility",
+    "Prefer official Microsoft/GitHub devcontainer images"
+  ],
+  "image": "{{BASE_IMAGE}}@sha256:{{DIGEST}}",
+
+  "// FEATURES": "Add tools via features instead of custom builds",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "installOhMyZsh": true
+    }
+  },
+
+  "// DEPENDENCIES": "Install project dependencies",
+  "postCreateCommand": "bash -c 'if [ -f requirements.txt ]; then pip install -r requirements.txt; elif [ -f package.json ]; then npm install; elif [ -f go.mod ]; then go mod download; fi'",
+
+  "// WORKSPACE SETUP": "Configure VS Code",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-vscode.vscode-typescript-next",
+        "golang.go"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  "// PORT FORWARDING": "Common development ports",
+  "forwardPorts": [3000, 5000, 8000, 8080],
+
+  "// CONTAINER USER": "Use non-root user",
+  "remoteUser": "vscode",
+
+  "// ENVIRONMENT": "Project-specific environment variables",
+  "remoteEnv": {
+    "PROJECT_NAME": "{{PROJECT_NAME}}",
+    "DEVELOPMENT_MODE": "true"
+  }
+}

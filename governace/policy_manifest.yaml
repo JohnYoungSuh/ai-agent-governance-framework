@@ -1,0 +1,149 @@
+# ============================================================
+# AI Agent Governance Framework Policy Manifest — v2.0
+# Applies to all AI agents operating under %project_name$ namespace
+# ============================================================
+
+policy:
+  policy_id: ai-agent-governance-v2.0
+  version: 2.0
+  last_updated: 2025-10-21
+  registry_url: "https://governance.%project_domain%/registry"
+  authoritative_source: "Governance and Compliance Team"
+  hash: "<sha256sum-of-this-file>"
+
+scope:
+  namespace_required: true
+  validation_method: "signed_metadata"
+  enforcement_controller: "agent-runtime-controller"
+  disallowed_actions:
+    - "cross-namespace access"
+    - "unauthorized resource creation"
+    - "file operations outside project root"
+
+safety:
+  read_only_first: true
+  destructive_action_rules:
+    - "Require explicit human confirmation"
+    - "List affected resources before execution"
+    - "Log rollback plan if available"
+  idempotency_required: true
+  sandbox_before_live: true
+  rollback_required: true
+  verbose_mode: "preferred"
+
+responsibility_separation:
+  build_time: "Static setup only — dependencies and templates"
+  runtime: "Minimal bootstrap logic; prefer native startup functions"
+  orchestration: "All env vars, ports, and volumes declared in manifests"
+  application_logic: "Customization via code functions only"
+  governance: "CI/CD enforces separation, rejects mixed stages"
+  runtime_env_modification_allowed: false
+
+directory_rules:
+  project_root:
+    linux: "~/projects/%project_name$/"
+    windows: "C:\\Users\\<user>\\Projects\\%project_name$\\"
+  destructive_commands_blocked:
+    - "rm -rf /"
+    - "rm -rf *"
+  confirm_overwrite: true
+  tmp_cleanup_required: true
+  data_locality_enforced: true
+  least_privilege_filesystem: true
+
+memory_and_state:
+  persistent_state_allowed: false
+  valid_storage_types:
+    - "container_volume"
+    - "bind_mount"
+  cache_policy:
+    ephemeral: true
+    clear_on_session_end: true
+  checkpoint_persistence_requires_approval: true
+
+audit:
+  format: "json"
+  required_fields:
+    - timestamp
+    - namespace
+    - action
+    - justification
+    - outcome
+  storage: "immutable"
+  retention_period_days: 365
+  sensitive_masking: true
+  access_restriction: "authorized_governance_only"
+
+identity:
+  require_signed_identity: true
+  auth_method: "JWT or mTLS"
+  reject_invalid_namespace: true
+
+secrets_management:
+  source: "Vault or KeyVault"
+  rotate_schedule_days: 90
+  local_cache_allowed: false
+  log_masking_required: true
+  least_privilege_scope: true
+
+policy_versioning:
+  enforce_latest: true
+  verify_hash: true
+  fail_on_outdated_policy: true
+
+human_escalation:
+  enabled: true
+  escalation_channels:
+    - "ServiceNow"
+    - "SlackOps"
+    - "email: security-ops@%project_domain%"
+  incident_format: "json"
+  include_human_summary: true
+
+resource_governance:
+  pre_validation_required: true
+  quota_enforcement: true
+  overage_action: "abort_and_alert"
+  override_requires_signature: true
+
+simulation_mode:
+  default_enabled: true
+  output_manifest_format: "yaml"
+  disable_requires_signed_override: true
+
+cross_agent_communication:
+  schema_validation_required: true
+  signed_messages_only: true
+  timestamp_required: true
+  secure_channel: "gRPC with mTLS"
+  reject_unsigned_or_replayed: true
+
+ci_cd_enforcement:
+  reject_conditions:
+    - "large entrypoint.sh"
+    - "mixed build/runtime layers"
+    - "missing env declarations"
+    - "no idempotency tests"
+  required_practices:
+    - "language-native startup functions"
+    - "multi-stage builds"
+    - "explicit volume mounts"
+    - "idempotency verification"
+  compliance_report_required: true
+  integration_tests:
+    - "namespace boundary validation"
+    - "policy compliance verification"
+
+workflow_expectation:
+  - "Inspect environment"
+  - "Confirm scope and namespace"
+  - "Suggest safe, read-only actions"
+  - "Request explicit confirmation for destructive actions"
+  - "Log and audit all steps"
+  - "Rollback or escalate on failure"
+
+metadata:
+  schema_version: 1.0
+  format: "yaml"
+  checksum_algorithm: "sha256"
+

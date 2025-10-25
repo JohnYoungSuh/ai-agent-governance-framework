@@ -1,0 +1,381 @@
+# ============================================================================
+# Cache Configuration - Token-Efficient Governance System
+# ============================================================================
+# Version: v1.0
+# Date: 2025-10-25
+# Purpose: Detailed caching strategy and expiry rules
+# ============================================================================
+
+metadata:
+  version: "1.0"
+  last_updated: "2025-10-25"
+
+# ============================================================================
+# CACHE BACKEND
+# ============================================================================
+
+backend:
+  # Options: memory, redis, memcached
+  type: "memory"  # Start with memory, upgrade to Redis for production
+
+  memory:
+    max_entries: 10000
+    eviction_policy: "LRU"  # Least Recently Used
+    cleanup_interval_seconds: 300  # Clean up every 5 minutes
+
+  redis:
+    enabled: false  # Set true for production
+    host: "localhost"
+    port: 6379
+    db: 0
+    password: null
+    ssl: false
+
+    connection_pool:
+      max_connections: 50
+      timeout_seconds: 5
+
+    cluster_mode: false
+    cluster_nodes: []
+
+  memcached:
+    enabled: false
+    servers:
+      - "localhost:11211"
+    pool_size: 10
+
+# ============================================================================
+# CACHE EXPIRY RULES (TTL - Time To Live)
+# ============================================================================
+
+expiry_rules:
+  # Default TTL for all cache entries
+  default_ttl_seconds: 3600  # 1 hour
+
+  # TTL by action category
+  by_category:
+    CREATE:
+      ttl_seconds: 1800  # 30 minutes (policies may change frequently)
+      reason: "Creation policies update often with quota changes"
+
+    MODIFY:
+      ttl_seconds: 1800  # 30 minutes
+      reason: "Modification rules change with environment updates"
+
+    DELETE:
+      ttl_seconds: 900   # 15 minutes (higher risk, shorter cache)
+      reason: "DELETE policies are critical, cache conservatively"
+
+    ACCESS:
+      ttl_seconds: 3600  # 1 hour (stable policies)
+      reason: "Access control policies rarely change"
+
+    COMPLY:
+      ttl_seconds: 7200  # 2 hours (very stable)
+      reason: "Compliance queries are read-only and policies stable"
+
+  # TTL by risk level
+  by_risk_level:
+    low:
+      ttl_seconds: 7200  # 2 hours
+      reason: "Low risk decisions are stable"
+
+    medium:
+      ttl_seconds: 3600  # 1 hour
+      reason: "Medium risk needs moderate refresh"
+
+    high:
+      ttl_seconds: 1800  # 30 minutes
+      reason: "High risk requires frequent validation"
+
+    critical:
+      ttl_seconds: 0     # Do not cache
+      reason: "Critical decisions always use fresh evaluation"
+
+  # TTL by namespace
+  by_namespace:
+    dev:
+      ttl_seconds: 7200  # 2 hours (stable)
+      reason: "Dev policies rarely change"
+
+    staging:
+      ttl_seconds: 3600  # 1 hour
+      reason: "Staging policies update moderately"
+
+    production:
+      ttl_seconds: 900   # 15 minutes (cautious caching)
+      reason: "Production policies require fresh validation"
+
+  # TTL by agent tier
+  by_tier:
+    T1:
+      ttl_seconds: 7200  # 2 hours (read-only is stable)
+      reason: "Tier 1 read-only policies are very stable"
+
+    T2:
+      ttl_seconds: 3600  # 1 hour
+      reason: "Tier 2 supervised execution policies moderate"
+
+    T3:
+      ttl_seconds: 1800  # 30 minutes
+      reason: "Tier 3 orchestration policies change with quotas"
+
+    T4:
+      ttl_seconds: 900   # 15 minutes
+      reason: "Tier 4 autonomous requires frequent validation"
+
+  # Combined rule priority (most restrictive wins)
+  priority_order:
+    - risk_level      # Highest priority
+    - namespace
+    - category
+    - tier
+    - default
+
+# ============================================================================
+# CACHE INVALIDATION RULES
+# ============================================================================
+
+invalidation:
+  # Automatically invalidate cache when:
+  triggers:
+    - event: "policy_update"
+      action: "invalidate_all"
+      reason: "Policy changes require fresh decisions"
+
+    - event: "guardrail_update"
+      action: "invalidate_by_guardrail"
+      pattern: "guardrail_{id}:*"
+      reason: "Specific guardrail changes affect related decisions"
+
+    - event: "namespace_quota_change"
+      action: "invalidate_by_namespace"
+      pattern: "*:{namespace}:*"
+      reason: "Quota changes affect resource decisions"
+
+    - event: "tier_permission_change"
+      action: "invalidate_by_tier"
+      pattern: "{tier}:*"
+      reason: "Tier permission changes affect all tier decisions"
+
+    - event: "security_incident"
+      action: "invalidate_all"
+      reason: "Security incidents require immediate re-evaluation"
+
+  # Manual invalidation API
+  manual:
+    enabled: true
+    api_endpoint: "/api/v1/cache/invalidate"
+    authentication_required: true
+    allowed_patterns:
+      - "all"                    # Flush entire cache
+      - "namespace:{namespace}"  # Flush by namespace
+      - "tier:{tier}"            # Flush by tier
+      - "category:{category}"    # Flush by category
+      - "specific:{cache_key}"   # Flush specific key
+
+# ============================================================================
+# CACHE KEY STRUCTURE
+# ============================================================================
+
+cache_key:
+  # Standard format: {tier}:{category}:{subcategory}:{namespace}:{hash}
+  format: "{tier}:{category}:{subcategory}:{namespace}:{context_hash}"
+
+  components:
+    tier:
+      values: ["T1", "T2", "T3", "T4"]
+      required: true
+
+    category:
+      values: ["CREATE", "MODIFY", "DELETE", "ACCESS", "COMPLY"]
+      required: true
+
+    subcategory:
+      examples: ["k8s_deployment", "logs", "secrets", "temp_files"]
+      required: true
+      max_length: 50
+
+    namespace:
+      validation: "^[a-z0-9-]+$"
+      required: true
+      max_length: 63  # K8s namespace limit
+
+    context_hash:
+      algorithm: "md5"  # Fast hashing for cache keys
+      include_fields:
+        - agent_name
+        - resource_type
+        - environment
+      optional: true
+
+  examples:
+    - "T1:ACCESS:logs:dev:a1b2c3d4"
+    - "T3:CREATE:k8s_deployment:staging:e5f6g7h8"
+    - "T2:MODIFY:config:dev:i9j0k1l2"
+
+# ============================================================================
+# CACHE WARMING
+# ============================================================================
+
+warming:
+  # Pre-populate cache with common patterns
+  enabled: true
+  on_startup: true
+
+  # Common patterns to pre-cache
+  patterns:
+    - tier: "T1"
+      category: "ACCESS"
+      subcategory: "logs"
+      namespaces: ["dev", "staging", "production"]
+      decision:
+        decision: "ALLOW"
+        reason: "Standard Tier 1 log read"
+        guardrails_checked: ["1", "6"]
+
+    - tier: "T1"
+      category: "ACCESS"
+      subcategory: "config"
+      namespaces: ["dev", "staging"]
+      decision:
+        decision: "ALLOW"
+        reason: "Standard Tier 1 config read"
+        guardrails_checked: ["1", "6"]
+
+    - tier: "T2"
+      category: "CREATE"
+      subcategory: "temp_directory"
+      namespaces: ["dev"]
+      decision:
+        decision: "ALLOW"
+        reason: "Tier 2 temp directory creation in dev"
+        guardrails_checked: ["1", "4"]
+
+    - tier: "T3"
+      category: "CREATE"
+      subcategory: "k8s_service"
+      namespaces: ["dev", "staging"]
+      decision:
+        decision: "ALLOW"
+        reason: "Tier 3 k8s service creation"
+        requires_confirmation: false
+        guardrails_checked: ["1", "3", "11"]
+
+  # Refresh warmed cache entries
+  refresh_interval_hours: 6
+
+# ============================================================================
+# CACHE MONITORING
+# ============================================================================
+
+monitoring:
+  enabled: true
+
+  metrics:
+    - cache_hit_rate
+    - cache_miss_rate
+    - cache_size_entries
+    - cache_size_bytes
+    - eviction_count
+    - ttl_expiration_count
+    - average_ttl_remaining
+    - invalidation_count
+
+  alerts:
+    - name: "low_hit_rate"
+      condition: "cache_hit_rate < 0.50"
+      action: "notify"
+      severity: "warning"
+
+    - name: "cache_full"
+      condition: "cache_size_entries > 0.90 * max_entries"
+      action: "increase_eviction_frequency"
+      severity: "info"
+
+    - name: "high_eviction_rate"
+      condition: "eviction_count > 100 per minute"
+      action: "consider_cache_size_increase"
+      severity: "warning"
+
+# ============================================================================
+# CACHE SECURITY
+# ============================================================================
+
+security:
+  # Prevent cache poisoning
+  validation:
+    verify_source: true
+    require_signature: false  # Set true for production
+    signature_algorithm: "HMAC-SHA256"
+    secret_key_env: "CACHE_SIGNATURE_SECRET"
+
+  # Prevent sensitive data caching
+  exclude_patterns:
+    - subcategory: "secrets"
+      reason: "Never cache secret access decisions"
+
+    - subcategory: "credentials"
+      reason: "Never cache credential decisions"
+
+    - subcategory: "pii"
+      reason: "Never cache PII access decisions"
+
+    - risk_level: "critical"
+      reason: "Critical decisions always fresh"
+
+  # Cache encryption (for sensitive metadata)
+  encryption:
+    enabled: false  # Set true if caching sensitive context
+    algorithm: "AES-256-GCM"
+    key_env: "CACHE_ENCRYPTION_KEY"
+
+# ============================================================================
+# CACHE PERSISTENCE (for Redis/Memcached)
+# ============================================================================
+
+persistence:
+  redis:
+    # Redis persistence options
+    rdb:
+      enabled: true
+      save_intervals:
+        - "900 1"    # Save after 900s if at least 1 key changed
+        - "300 10"   # Save after 300s if at least 10 keys changed
+        - "60 10000" # Save after 60s if at least 10000 keys changed
+
+    aof:
+      enabled: false  # Append-only file (not needed for cache)
+
+  # Backup and restore
+  backup:
+    enabled: false
+    schedule: "0 2 * * *"  # 2 AM daily
+    retention_days: 7
+    destination: "s3://governance-cache-backups/"
+
+# ============================================================================
+# TESTING & VALIDATION
+# ============================================================================
+
+testing:
+  # Cache correctness testing
+  validation_tests:
+    - name: "cache_consistency"
+      description: "Verify cached decisions match fresh evaluations"
+      frequency: "hourly"
+      sample_size: 100
+
+    - name: "ttl_enforcement"
+      description: "Verify TTL rules are enforced correctly"
+      frequency: "daily"
+
+    - name: "invalidation_completeness"
+      description: "Verify invalidation triggers work correctly"
+      frequency: "on_policy_change"
+
+  # Performance benchmarks
+  benchmarks:
+    target_hit_latency_ms: 5     # <5ms for cache hits
+    target_miss_latency_ms: 10   # <10ms for cache misses
+    target_hit_rate: 0.60        # >60% hit rate

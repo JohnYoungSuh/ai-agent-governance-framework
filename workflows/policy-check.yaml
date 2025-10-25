@@ -1,0 +1,17 @@
+name: Governance Policy Check
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  policy-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Policy Manifest
+        run: |
+          python3 ci/lint/policy_validator.py governance/policy_manifest.yaml
+      - name: Verify Policy Hash
+        run: |
+          sha256sum governance/policy_manifest.yaml | grep $(grep hash governance/policy_manifest.yaml | awk '{print $2}'):

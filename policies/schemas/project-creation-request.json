@@ -1,0 +1,321 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Project Creation Request",
+  "description": "Schema for AI-driven project creation requests requiring leadership approval",
+  "type": "object",
+  "required": [
+    "request_id",
+    "timestamp",
+    "requester",
+    "project_metadata",
+    "business_alignment",
+    "resource_requirements",
+    "approval_workflow"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "description": "Unique identifier for the project creation request",
+      "pattern": "^PCR-[0-9]{4}-[0-9]{4}$",
+      "examples": ["PCR-2025-0001"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of request creation"
+    },
+    "requester": {
+      "type": "object",
+      "required": ["name", "email", "role", "department"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of person requesting project creation"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of requester"
+        },
+        "role": {
+          "type": "string",
+          "description": "Job title/role of requester",
+          "examples": ["Engineering Manager", "Product Manager", "VP Engineering"]
+        },
+        "department": {
+          "type": "string",
+          "description": "Department or business unit",
+          "examples": ["Engineering", "Product", "Operations", "Customer Success"]
+        }
+      }
+    },
+    "project_metadata": {
+      "type": "object",
+      "required": ["name", "description", "tech_stack", "infrastructure", "owner", "agent_tier", "compliance"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Project name (lowercase-with-dashes)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed project description"
+        },
+        "tech_stack": {
+          "type": "string",
+          "description": "Technologies and frameworks used"
+        },
+        "infrastructure": {
+          "type": "string",
+          "description": "Infrastructure and deployment environment"
+        },
+        "owner": {
+          "type": "object",
+          "required": ["name", "email"],
+          "properties": {
+            "name": {"type": "string"},
+            "email": {"type": "string", "format": "email"}
+          }
+        },
+        "agent_tier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "AI agent tier (1=Observer, 2=Developer, 3=Operations, 4=Architect)"
+        },
+        "compliance": {
+          "type": "string",
+          "description": "Compliance requirements",
+          "examples": ["SOC2", "HIPAA", "FedRAMP", "ISO27001", "None"]
+        },
+        "estimated_duration": {
+          "type": "string",
+          "description": "Expected project duration",
+          "examples": ["3 months", "6 months", "Ongoing"]
+        }
+      }
+    },
+    "business_alignment": {
+      "type": "object",
+      "required": ["strategic_goal", "revenue_impact", "priority", "success_metrics"],
+      "properties": {
+        "strategic_goal": {
+          "type": "string",
+          "description": "Which company strategic goal does this support?",
+          "enum": [
+            "Increase Revenue",
+            "Reduce Costs",
+            "Improve Customer Experience",
+            "Enter New Market",
+            "Product Innovation",
+            "Operational Excellence",
+            "Compliance & Risk Management",
+            "Technical Debt Reduction",
+            "Team Productivity",
+            "Other"
+          ]
+        },
+        "strategic_goal_details": {
+          "type": "string",
+          "description": "Detailed explanation of how project aligns with strategic goal"
+        },
+        "revenue_impact": {
+          "type": "object",
+          "required": ["type", "estimated_annual_value", "confidence_level", "explanation"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "Direct Revenue Generation",
+                "Revenue Enablement",
+                "Cost Reduction (OpEx)",
+                "Cost Reduction (CapEx)",
+                "Cost Avoidance",
+                "Customer Retention",
+                "Efficiency Gain",
+                "Risk Mitigation",
+                "None"
+              ]
+            },
+            "estimated_annual_value": {
+              "type": "number",
+              "description": "Estimated annual financial impact in USD",
+              "minimum": 0
+            },
+            "confidence_level": {
+              "type": "string",
+              "enum": ["High (>80%)", "Medium (50-80%)", "Low (<50%)"]
+            },
+            "explanation": {
+              "type": "string",
+              "description": "Detailed explanation of revenue impact calculation"
+            },
+            "time_to_value": {
+              "type": "string",
+              "description": "Expected time to realize financial impact",
+              "examples": ["Immediate", "3 months", "6 months", "12 months"]
+            }
+          }
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["Critical", "High", "Medium", "Low"],
+          "description": "Business priority level"
+        },
+        "success_metrics": {
+          "type": "array",
+          "description": "Measurable success criteria",
+          "items": {
+            "type": "object",
+            "required": ["metric", "target", "measurement_method"],
+            "properties": {
+              "metric": {"type": "string", "examples": ["Revenue increase", "Cost reduction", "CSAT score"]},
+              "target": {"type": "string", "examples": ["+$500K ARR", "-30% support costs", "90+ CSAT"]},
+              "measurement_method": {"type": "string", "examples": ["Salesforce reports", "AWS cost explorer", "Customer surveys"]}
+            }
+          },
+          "minItems": 1
+        },
+        "okr_reference": {
+          "type": "string",
+          "description": "Reference to company/team OKR if applicable",
+          "examples": ["Q4-2025-ENG-03", "2025-PRODUCT-02"]
+        }
+      }
+    },
+    "resource_requirements": {
+      "type": "object",
+      "required": ["budget_monthly", "estimated_total_cost", "human_resources"],
+      "properties": {
+        "budget_monthly": {
+          "type": "number",
+          "description": "Monthly AI agent cost budget in USD",
+          "minimum": 0
+        },
+        "estimated_total_cost": {
+          "type": "number",
+          "description": "Total estimated project cost (AI + human + infrastructure) in USD",
+          "minimum": 0
+        },
+        "human_resources": {
+          "type": "array",
+          "description": "Human resources required",
+          "items": {
+            "type": "object",
+            "required": ["role", "time_allocation"],
+            "properties": {
+              "role": {"type": "string", "examples": ["Software Engineer", "Product Manager", "DevOps"]},
+              "time_allocation": {"type": "string", "examples": ["100%", "50%", "20%"]},
+              "duration": {"type": "string", "examples": ["3 months", "Ongoing"]}
+            }
+          }
+        },
+        "infrastructure_costs": {
+          "type": "number",
+          "description": "Monthly infrastructure costs (AWS, GCP, etc.) in USD"
+        }
+      }
+    },
+    "approval_workflow": {
+      "type": "object",
+      "required": ["approval_tier", "required_approvers", "status"],
+      "properties": {
+        "approval_tier": {
+          "type": "string",
+          "description": "Required approval tier based on cost and risk",
+          "enum": [
+            "Team Lead Only (<$500/mo)",
+            "Manager Approval ($500-$2K/mo)",
+            "Director Approval ($2K-$10K/mo)",
+            "VP Approval ($10K-$50K/mo)",
+            "Executive Approval (>$50K/mo or Strategic)"
+          ]
+        },
+        "required_approvers": {
+          "type": "array",
+          "description": "List of required approvers",
+          "items": {
+            "type": "object",
+            "required": ["name", "email", "role", "approval_status"],
+            "properties": {
+              "name": {"type": "string"},
+              "email": {"type": "string", "format": "email"},
+              "role": {"type": "string", "examples": ["Engineering Manager", "VP Engineering", "CFO"]},
+              "approval_status": {
+                "type": "string",
+                "enum": ["Pending", "Approved", "Rejected", "More Info Needed"]
+              },
+              "approval_timestamp": {"type": "string", "format": "date-time"},
+              "approval_comments": {"type": "string"}
+            }
+          },
+          "minItems": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Draft", "Pending Approval", "Approved", "Rejected", "More Info Needed"],
+          "description": "Overall approval status"
+        },
+        "jira_issue_key": {
+          "type": "string",
+          "description": "Jira issue key for approval tracking",
+          "pattern": "^[A-Z]+-[0-9]+$",
+          "examples": ["PROJAPPR-123"]
+        },
+        "decision_deadline": {
+          "type": "string",
+          "format": "date",
+          "description": "Date by which approval decision is needed"
+        }
+      }
+    },
+    "risk_assessment": {
+      "type": "object",
+      "description": "Risk assessment for leadership review",
+      "required": ["overall_risk_level", "risk_factors"],
+      "properties": {
+        "overall_risk_level": {
+          "type": "string",
+          "enum": ["Low", "Medium", "High", "Critical"]
+        },
+        "risk_factors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["category", "description", "mitigation"],
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": ["Security", "Compliance", "Financial", "Operational", "Reputational", "Technical"]
+              },
+              "description": {"type": "string"},
+              "mitigation": {"type": "string"},
+              "severity": {"type": "string", "enum": ["Low", "Medium", "High"]}
+            }
+          }
+        }
+      }
+    },
+    "audit_trail": {
+      "type": "object",
+      "properties": {
+        "created_at": {"type": "string", "format": "date-time"},
+        "created_by": {"type": "string"},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "updated_by": {"type": "string"},
+        "approval_history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": {"type": "string", "format": "date-time"},
+              "actor": {"type": "string"},
+              "action": {"type": "string", "enum": ["Created", "Submitted", "Approved", "Rejected", "Updated", "Commented"]},
+              "details": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

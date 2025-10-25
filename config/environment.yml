@@ -1,0 +1,400 @@
+# ============================================================================
+# Environment Configuration - Token-Efficient Governance System
+# ============================================================================
+# Version: v1.0
+# Date: 2025-10-25
+# Purpose: Environment-specific settings and namespace definitions
+# ============================================================================
+
+metadata:
+  version: "1.0"
+  last_updated: "2025-10-25"
+
+# ============================================================================
+# NAMESPACE DEFINITIONS
+# ============================================================================
+
+namespaces:
+  dev:
+    name: "Development"
+    risk_level: "low"
+    allowed_actions: ["CREATE", "MODIFY", "DELETE", "ACCESS", "COMPLY"]
+    allowed_tiers: ["T1", "T2", "T3", "T4"]
+
+    restrictions:
+      max_cost_per_action: 10.0  # USD
+      max_resources: 50
+      require_approval: false
+      require_confirmation: false
+      simulation_required: false
+
+    compliance_requirements:
+      - "Basic audit trail"
+      - "Namespace isolation"
+
+    metadata:
+      owner: "Engineering Team"
+      purpose: "Development and testing"
+
+  staging:
+    name: "Staging"
+    risk_level: "medium"
+    allowed_actions: ["CREATE", "MODIFY", "DELETE", "ACCESS", "COMPLY"]
+    allowed_tiers: ["T2", "T3", "T4"]  # No Tier 1 modifications
+
+    restrictions:
+      max_cost_per_action: 50.0  # USD
+      max_resources: 100
+      require_approval: false
+      require_confirmation: true  # Confirmation for MODIFY/DELETE
+      simulation_required: true   # Simulate DELETE operations
+
+    compliance_requirements:
+      - "Full audit trail"
+      - "Namespace isolation"
+      - "Change management documentation"
+
+    metadata:
+      owner: "QA Team"
+      purpose: "Pre-production validation"
+
+  production:
+    name: "Production"
+    risk_level: "critical"
+    allowed_actions: ["ACCESS", "COMPLY"]  # CREATE/MODIFY/DELETE require approval
+    allowed_tiers: ["T3", "T4"]  # Only orchestrator and autonomous
+
+    restrictions:
+      max_cost_per_action: 1000.0  # USD
+      max_resources: 1000
+      require_approval: true      # All changes require approval
+      require_confirmation: true
+      simulation_required: true   # Always simulate first
+
+    compliance_requirements:
+      - "Immutable audit trail"
+      - "Multi-approval workflow"
+      - "Incident response integration"
+      - "Rollback capability"
+      - "NIST 800-53 compliance"
+
+    metadata:
+      owner: "Platform Team"
+      purpose: "Production workloads"
+      sla: "99.9%"
+
+# ============================================================================
+# AGENT TIER DEFINITIONS
+# ============================================================================
+
+agent_tiers:
+  T1:
+    name: "Assistant (Read-Only)"
+    autonomy_level: "None"
+    risk_level: "Low"
+
+    capabilities:
+      - "Read files and data"
+      - "Answer questions"
+      - "Generate reports"
+      - "View configurations"
+
+    restrictions:
+      - "No write operations"
+      - "No external API calls"
+      - "No code execution"
+      - "Namespace-bound only"
+
+    allowed_actions:
+      CREATE: false
+      MODIFY: false
+      DELETE: false
+      ACCESS: true
+      COMPLY: true
+
+    examples:
+      - "observer-agent"
+      - "audit-agent"
+      - "read-only-reporter"
+
+  T2:
+    name: "Executor (Supervised)"
+    autonomy_level: "Low"
+    risk_level: "Medium"
+
+    capabilities:
+      - "Execute pre-approved scripts"
+      - "Modify files with confirmation"
+      - "Run tests and builds"
+      - "Deploy to dev/staging"
+
+    restrictions:
+      - "Confirmation required for changes"
+      - "No production deployments"
+      - "No infrastructure changes"
+      - "Backup required before MODIFY"
+
+    allowed_actions:
+      CREATE: true   # In dev/staging only
+      MODIFY: true   # With confirmation
+      DELETE: true   # Temp files only
+      ACCESS: true
+      COMPLY: true
+
+    examples:
+      - "executor-agent"
+      - "test-runner"
+      - "build-agent"
+
+  T3:
+    name: "Orchestrator (Semi-Autonomous)"
+    autonomy_level: "Medium"
+    risk_level: "High"
+
+    capabilities:
+      - "Multi-step workflows"
+      - "CI/CD pipeline execution"
+      - "Development and staging deployments"
+      - "Resource provisioning (non-production)"
+
+    restrictions:
+      - "Production changes require approval"
+      - "Budget caps enforced"
+      - "Audit trail mandatory"
+      - "Quota limits enforced"
+
+    allowed_actions:
+      CREATE: true   # All namespaces with appropriate approval
+      MODIFY: true   # Non-production without approval
+      DELETE: true   # Non-production with simulation
+      ACCESS: true
+      COMPLY: true
+
+    examples:
+      - "deploy-agent"
+      - "orchestrator"
+      - "cicd-runner"
+
+  T4:
+    name: "Autonomous (Full Authority)"
+    autonomy_level: "High"
+    risk_level: "Critical"
+
+    capabilities:
+      - "Full SDLC automation"
+      - "Production deployments"
+      - "Infrastructure as code"
+      - "Self-healing operations"
+
+    restrictions:
+      - "Human oversight required"
+      - "Real-time monitoring mandatory"
+      - "Rollback capability required"
+      - "Multi-approval for production"
+
+    allowed_actions:
+      CREATE: true   # All namespaces with approval
+      MODIFY: true   # All namespaces with approval
+      DELETE: true   # All namespaces with approval
+      ACCESS: true   # Including secrets (with approval)
+      COMPLY: true
+
+    examples:
+      - "architect-agent"
+      - "admin-agent"
+      - "autonomous-platform"
+
+# ============================================================================
+# AGENT REGISTRY
+# ============================================================================
+
+agent_registry:
+  # Maps specific agent names to tiers
+  registered_agents:
+    observer-agent:
+      tier: "T1"
+      namespaces: ["dev", "staging", "production"]
+      description: "Read-only observer for all environments"
+
+    audit-agent:
+      tier: "T1"
+      namespaces: ["dev", "staging", "production"]
+      description: "Compliance and audit reporting"
+
+    test-runner:
+      tier: "T2"
+      namespaces: ["dev", "staging"]
+      description: "Automated testing execution"
+
+    build-agent:
+      tier: "T2"
+      namespaces: ["dev", "staging"]
+      description: "CI/CD build execution"
+
+    deploy-agent:
+      tier: "T3"
+      namespaces: ["dev", "staging"]
+      description: "Deployment orchestration"
+
+    cleanup-agent:
+      tier: "T3"
+      namespaces: ["dev", "staging"]
+      description: "Resource cleanup and maintenance"
+
+    architect-agent:
+      tier: "T4"
+      namespaces: ["production"]
+      description: "Production architecture and infrastructure"
+      requires_approval: true
+
+  # Wildcard patterns
+  tier_patterns:
+    - pattern: "read-only-*"
+      tier: "T1"
+
+    - pattern: "executor-*"
+      tier: "T2"
+
+    - pattern: "orchestrator-*"
+      tier: "T3"
+
+    - pattern: "autonomous-*"
+      tier: "T4"
+
+# ============================================================================
+# RESOURCE QUOTAS (Guardrail #11)
+# ============================================================================
+
+resource_quotas:
+  dev:
+    max_cpu_cores: 16
+    max_memory_gb: 32
+    max_storage_gb: 100
+    max_k8s_pods: 50
+    max_k8s_services: 10
+    max_loadbalancers: 0  # Not allowed in dev
+    max_databases: 3
+
+  staging:
+    max_cpu_cores: 32
+    max_memory_gb: 64
+    max_storage_gb: 500
+    max_k8s_pods: 100
+    max_k8s_services: 20
+    max_loadbalancers: 2
+    max_databases: 5
+
+  production:
+    max_cpu_cores: 128
+    max_memory_gb: 512
+    max_storage_gb: 5000
+    max_k8s_pods: 1000
+    max_k8s_services: 100
+    max_loadbalancers: 10
+    max_databases: 20
+
+# ============================================================================
+# COST THRESHOLDS
+# ============================================================================
+
+cost_controls:
+  dev:
+    daily_budget_usd: 50
+    monthly_budget_usd: 1000
+    alert_threshold_pct: 80
+
+  staging:
+    daily_budget_usd: 100
+    monthly_budget_usd: 2000
+    alert_threshold_pct: 85
+
+  production:
+    daily_budget_usd: 1000
+    monthly_budget_usd: 20000
+    alert_threshold_pct: 90
+
+# ============================================================================
+# APPROVAL WORKFLOWS (Guardrail #10)
+# ============================================================================
+
+approval_workflows:
+  tier_1_approval:
+    required_for:
+      - "Production READ of secrets"
+    approvers:
+      - "team-lead@example.com"
+    timeout_hours: 24
+
+  tier_2_approval:
+    required_for:
+      - "Production MODIFY"
+      - "Staging DELETE"
+    approvers:
+      - "engineering-manager@example.com"
+    timeout_hours: 48
+
+  tier_3_approval:
+    required_for:
+      - "Production DELETE"
+      - "Infrastructure changes"
+      - "Cost > $1000"
+    approvers:
+      - "director@example.com"
+      - "vp-engineering@example.com"
+    timeout_hours: 72
+    require_multi_approval: true  # At least 2 approvers
+
+# ============================================================================
+# INTEGRATION SETTINGS
+# ============================================================================
+
+integrations:
+  secrets_stores:
+    vault:
+      enabled: true
+      address: "https://vault.example.com"
+      namespace: "governance"
+
+    aws_secrets_manager:
+      enabled: false
+      region: "us-east-1"
+
+    azure_key_vault:
+      enabled: false
+      vault_url: "https://example.vault.azure.net"
+
+  monitoring:
+    prometheus:
+      enabled: true
+      url: "http://prometheus:9090"
+
+    grafana:
+      enabled: true
+      url: "http://grafana:3000"
+
+  ticketing:
+    jira:
+      enabled: false
+      url: "https://example.atlassian.net"
+      project_key: "GOV"
+
+    servicenow:
+      enabled: false
+      instance: "example.service-now.com"
+
+# ============================================================================
+# ENVIRONMENT VARIABLES
+# ============================================================================
+
+environment_variables:
+  # These are available to governance router at runtime
+  required:
+    - GOVERNANCE_ENV  # dev, staging, production
+    - NAMESPACE
+    - AGENT_NAME
+    - AGENT_TIER
+
+  optional:
+    - COST_CENTER
+    - TEAM_OWNER
+    - PROJECT_ID

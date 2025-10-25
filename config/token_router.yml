@@ -1,0 +1,439 @@
+# ============================================================================
+# Token-Efficient Governance Router Configuration
+# ============================================================================
+# Version: v1.0
+# Date: 2025-10-25
+# Source: AI Agent Governance Framework
+# ============================================================================
+
+metadata:
+  version: "1.0"
+  framework_version: "2.0"
+  last_updated: "2025-10-25"
+  maintainer: "AI Governance Team"
+
+# ============================================================================
+# MODEL CONFIGURATION
+# ============================================================================
+
+models:
+  small:
+    provider: "google"
+    model: "gemini-2.0-flash-thinking-exp-1219"
+    purpose: "Cache classification and intent routing"
+
+    token_limits:
+      max_input_tokens: 100
+      max_output_tokens: 200
+      total_budget_per_request: 300
+
+    generation_config:
+      temperature: 0.0  # Deterministic for caching
+      top_p: 1.0
+      top_k: 1
+
+    pricing:
+      cost_per_1k_input_tokens: 0.0001
+      cost_per_1k_output_tokens: 0.0002
+      currency: "USD"
+
+    timeout_ms: 5000  # 5 second timeout
+    retry_config:
+      max_retries: 2
+      backoff_multiplier: 1.5
+
+  large:
+    provider: "anthropic"
+    model: "claude-opus-4-20250514"
+    purpose: "Complex governance decisions and policy distillation"
+
+    token_limits:
+      max_input_tokens: 1000
+      max_output_tokens: 800
+      total_budget_per_request: 1800
+
+    generation_config:
+      temperature: 0.2  # Slight randomness for nuanced decisions
+      top_p: 0.95
+
+    pricing:
+      cost_per_1k_input_tokens: 0.015
+      cost_per_1k_output_tokens: 0.075
+      currency: "USD"
+
+    timeout_ms: 15000  # 15 second timeout
+    retry_config:
+      max_retries: 3
+      backoff_multiplier: 2.0
+
+# ============================================================================
+# ROUTING CONFIGURATION
+# ============================================================================
+
+routing:
+  # Confidence thresholds for routing decisions
+  thresholds:
+    cache_hit_confidence: 0.95  # Must be >0.95 to use cache
+    router_confidence: 0.85     # >0.85 to use intent router
+    escalate_below: 0.85        # <0.85 escalates to large model
+
+  # When to automatically escalate to large model
+  escalation_triggers:
+    risk_levels: ["high", "critical"]
+    agent_tier_violation: true
+    namespaces: ["production", "prod"]
+    actions: ["delete"]
+    subcategories: ["secrets", "credentials", "pii", "database", "infrastructure"]
+    cost_threshold_usd: 100.0
+
+  # Simple rules eligibility
+  simple_rules:
+    max_risk_level: "medium"
+    allowed_tiers: ["T1", "T2", "T3"]
+    excluded_namespaces: ["production"]
+
+  # Token budget controls
+  token_budget:
+    daily_limit: 100000
+    hourly_limit: 10000
+    per_request_max: 2000
+    alert_threshold_pct: 80  # Alert at 80% of budget
+
+# ============================================================================
+# CACHE CONFIGURATION (see cache_config.yml for detailed settings)
+# ============================================================================
+
+cache:
+  enabled: true
+  config_file: "config/cache_config.yml"
+
+  # Quick reference
+  default_ttl: 3600  # 1 hour
+  max_entries: 10000
+  eviction_policy: "LRU"  # Least Recently Used
+
+# ============================================================================
+# PROMPTS CONFIGURATION
+# ============================================================================
+
+prompts:
+  directory: "scripts/prompts"
+
+  files:
+    cache_classifier: "cache_classifier.txt"
+    intent_router: "intent_router.txt"
+    distillation: "distillation.txt"
+
+  versioning:
+    track_changes: true
+    changelog_file: "CHANGELOG.md"
+    require_version_match: true  # Fail if prompt version doesn't match config
+
+# ============================================================================
+# POLICY & GUARDRAILS
+# ============================================================================
+
+governance:
+  framework_file: "frameworks/governance-framework.yaml"
+  guardrails_file: "frameworks/agent-guardrail.yaml"
+  simple_rules_file: "policies/simple_rules.yml"
+
+  guardrail_count: 16
+  agent_tier_count: 4
+  action_categories: ["CREATE", "MODIFY", "DELETE", "ACCESS", "COMPLY"]
+
+  # Policy integrity verification (Guardrail #9)
+  policy_verification:
+    enabled: true
+    expected_hash: "sha256:PLACEHOLDER"  # Update after first deployment
+    hash_algorithm: "sha256"
+    verify_on_startup: true
+
+# ============================================================================
+# TOKEN ACCOUNTABILITY (from policies/token-accountability-policy.md)
+# ============================================================================
+
+token_accountability:
+  logging:
+    enabled: true
+    directory: "logs/token-usage"
+    format: "json"
+
+    # Log when any threshold exceeded
+    thresholds:
+      tokens_used: 50000
+      cost_usd: 0.15
+      session_duration_minutes: 30
+      files_changed: 10
+
+  budgets:
+    development:
+      daily_limit: 10000
+      monthly_limit: 200000
+      alert_threshold_pct: 80
+
+    testing:
+      daily_limit: 5000
+      monthly_limit: 100000
+      alert_threshold_pct: 75
+
+    production:
+      daily_limit: 50000
+      monthly_limit: 1000000
+      alert_threshold_pct: 90
+
+  efficiency_targets:
+    optimal: 0.80      # 80%+ efficiency
+    acceptable: 0.60   # 60-79% efficiency
+    inefficient: 0.40  # 40-59% efficiency
+    wasteful: 0.00     # <40% efficiency
+
+# ============================================================================
+# MONITORING & OBSERVABILITY
+# ============================================================================
+
+monitoring:
+  enabled: true
+
+  metrics:
+    export_interval_seconds: 60
+
+    tracked_metrics:
+      - cache_hit_rate
+      - cache_miss_rate
+      - token_usage_total
+      - token_savings_percentage
+      - latency_p50_ms
+      - latency_p95_ms
+      - latency_p99_ms
+      - decision_accuracy
+      - large_model_escalation_rate
+      - cost_per_request_usd
+
+  alerting:
+    enabled: true
+
+    alerts:
+      - name: "low_cache_hit_rate"
+        condition: "cache_hit_rate < 0.5"
+        severity: "warning"
+        notification_channels: ["email", "slack"]
+
+      - name: "token_budget_exceeded"
+        condition: "daily_tokens > daily_limit"
+        severity: "critical"
+        notification_channels: ["email", "slack", "pagerduty"]
+
+      - name: "high_escalation_rate"
+        condition: "large_model_escalation_rate > 0.10"
+        severity: "info"
+        notification_channels: ["email"]
+
+      - name: "security_violation"
+        condition: "guardrail_violation_detected"
+        severity: "critical"
+        notification_channels: ["email", "slack", "pagerduty"]
+
+  export:
+    prometheus:
+      enabled: true
+      port: 9090
+      endpoint: "/metrics"
+
+    grafana:
+      enabled: true
+      dashboard_file: "dashboards/governance_router.json"
+
+# ============================================================================
+# DISTILLATION CONFIGURATION
+# ============================================================================
+
+distillation:
+  enabled: true
+  queue_file: "logs/distillation_queue.jsonl"
+  output_directory: "policies/distilled_rules"
+
+  # Automatically distill patterns that meet these criteria
+  auto_distill:
+    enabled: true
+    triggers:
+      min_occurrences: 5      # Same pattern seen 5+ times
+      min_confidence: 0.85    # High confidence decisions
+      max_age_days: 7         # Within last 7 days
+      min_cost_impact: 0.50   # Save at least $0.50
+
+  # Validation before deploying distilled rules
+  validation:
+    require_tests: true
+    min_test_coverage: 0.80  # 80% coverage
+    accuracy_threshold: 0.95  # 95% accuracy vs large model
+
+# ============================================================================
+# SECURITY
+# ============================================================================
+
+security:
+  # Input sanitization (prevent prompt injection)
+  input_validation:
+    enabled: true
+    max_request_length: 500  # characters
+    allowed_characters: "alphanumeric_and_punctuation"
+    block_patterns:
+      - "(?i)ignore (previous|above|all) instructions"
+      - "(?i)you are now"
+      - "(?i)forget your"
+      - "(?i)system prompt"
+
+  # Namespace validation (Guardrail #7)
+  namespace_validation:
+    enabled: true
+    require_jwt: false  # Set true when JWT implementation ready
+    jwt_config:
+      public_key_path: "config/namespace_jwt.pub"
+      algorithm: "RS256"
+      verify_exp: true
+
+  # Audit trail (Guardrail #6)
+  audit_logging:
+    enabled: true
+    format: "json"
+    storage: "logs/audit"
+    immutable: true  # Append-only
+    retention_days: 365
+
+    required_fields:
+      - timestamp
+      - namespace
+      - agent_name
+      - action_type
+      - decision
+      - route
+      - tokens_used
+      - guardrails_checked
+
+  # Emergency controls
+  kill_switch:
+    enabled: true
+    file_path: "/tmp/governance_kill_switch"
+    check_interval_seconds: 5
+
+    per_agent_switches:
+      enabled: true
+      path_pattern: "/tmp/governance_kill_switch_{agent_name}"
+
+# ============================================================================
+# ENVIRONMENT INTEGRATION (see environment.yml for detailed settings)
+# ============================================================================
+
+environment:
+  config_file: "config/environment.yml"
+
+  allowed_namespaces:
+    - "dev"
+    - "staging"
+    - "production"
+
+  tier_mappings:
+    T1: ["observer-agent", "audit-agent", "read-only-*"]
+    T2: ["executor-agent", "test-runner-*", "build-agent"]
+    T3: ["deploy-agent", "orchestrator-*", "cicd-*"]
+    T4: ["architect-agent", "admin-agent", "autonomous-*"]
+
+# ============================================================================
+# COMPLIANCE FRAMEWORK REFERENCES
+# ============================================================================
+
+compliance:
+  frameworks:
+    - name: "NIST 800-53"
+      version: "Rev 5"
+      applicable_controls:
+        - AC-6  # Least Privilege
+        - AU-2  # Audit Events
+        - IA-5  # Authenticator Management
+        - IR-4  # Incident Handling
+        - SC-6  # Resource Availability
+        - SI-2  # Flaw Remediation
+
+    - name: "DoD RMF"
+      version: "2.0"
+      applicable_controls:
+        - AC-6
+        - AU-2
+        - CA-7  # Continuous Monitoring
+        - CM-2  # Baseline Configuration
+        - CM-3  # Configuration Change Control
+
+    - name: "ISO/IEC 42001"
+      version: "2023"
+      applicable_controls:
+        - "6.1.4"  # Risk Assessment
+        - "7.1"    # Resources
+        - "8.1"    # Operational Planning
+        - "8.3"    # Awareness
+
+  # Guardrail to compliance mapping
+  guardrail_compliance_map:
+    "1": ["NIST-AC-6", "DoD-AC-6", "ISO-6.1.4"]
+    "2": ["NIST-SI-2", "DoD-SI-2"]
+    "6": ["NIST-AU-2", "DoD-AU-2", "ISO-8.3"]
+    "8": ["NIST-IA-5", "DoD-IA-5"]
+    "10": ["NIST-IR-4", "DoD-IR-4"]
+    "11": ["NIST-SC-6", "DoD-SC-6", "ISO-7.1"]
+    "12": ["ISO-8.1"]
+
+# ============================================================================
+# TESTING & VALIDATION
+# ============================================================================
+
+testing:
+  benchmark_script: "scripts/benchmark_token_savings.py"
+  test_suite: "tests/test_router.py"
+
+  validation_thresholds:
+    min_token_savings_pct: 70.0
+    min_accuracy_pct: 95.0
+    max_latency_p95_ms: 500
+    min_cache_hit_rate: 0.50
+
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
+
+features:
+  enable_cache: true
+  enable_intent_router: true
+  enable_simple_rules: true
+  enable_distillation: true
+  enable_monitoring: true
+  enable_security_checks: true
+
+  experimental:
+    enable_ml_cache_prediction: false
+    enable_auto_rule_generation: false
+    enable_cross_namespace_learning: false
+
+# ============================================================================
+# NOTIFICATION CHANNELS
+# ============================================================================
+
+notifications:
+  email:
+    enabled: true
+    recipients:
+      - "ai-governance@example.com"
+      - "engineering-leads@example.com"
+    smtp_config:
+      host: "smtp.example.com"
+      port: 587
+      use_tls: true
+
+  slack:
+    enabled: false
+    webhook_url: "https://hooks.slack.com/services/PLACEHOLDER"
+    default_channel: "#governance-alerts"
+
+  pagerduty:
+    enabled: false
+    integration_key: "PLACEHOLDER"
+    service_id: "PLACEHOLDER"

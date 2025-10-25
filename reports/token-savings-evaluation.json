@@ -1,0 +1,264 @@
+{
+  "report_metadata": {
+    "generated_at": "2025-10-23T13:38:22.344070",
+    "framework_version": "1.0",
+    "evaluator_version": "1.0.0"
+  },
+  "executive_summary": {
+    "per_operation_summary": {
+      "total_tokens_without_framework": 2565,
+      "total_tokens_with_framework": 210,
+      "total_tokens_saved": 2355,
+      "savings_percentage": 91.81286549707602
+    },
+    "annual_summary": {
+      "total_operations_per_year": 4312,
+      "total_tokens_saved_annually": 1426620,
+      "cost_savings_usd": 14.27
+    },
+    "by_category": {
+      "Configuration Loading": {
+        "tokens_saved": 190,
+        "savings_percentage": 95.0,
+        "annual_savings": 190000
+      },
+      "Data Lookups": {
+        "tokens_saved": 185,
+        "savings_percentage": 97.36842105263158,
+        "annual_savings": 92500
+      },
+      "Validation Operations": {
+        "tokens_saved": 360,
+        "savings_percentage": 90.0,
+        "annual_savings": 72000
+      },
+      "Context Building": {
+        "tokens_saved": 450,
+        "savings_percentage": 90.0,
+        "annual_savings": 900000
+      },
+      "Devcontainer Operations": {
+        "tokens_saved": 410,
+        "savings_percentage": 96.47058823529412,
+        "annual_savings": 41000
+      },
+      "CI/CD Policy Checks": {
+        "tokens_saved": 250,
+        "savings_percentage": 83.33333333333334,
+        "annual_savings": 125000
+      },
+      "Documentation Synchronization": {
+        "tokens_saved": 510,
+        "savings_percentage": 92.72727272727272,
+        "annual_savings": 6120
+      }
+    }
+  },
+  "detailed_evaluations": [
+    {
+      "operation": "Configuration Loading",
+      "without_framework_tokens": 200,
+      "with_framework_tokens": 10,
+      "tokens_saved": 190,
+      "savings_percentage": 95.0,
+      "breakdown": {
+        "without_framework": {
+          "load_strategic_goals": 50,
+          "load_revenue_types": 50,
+          "load_approval_tiers": 50,
+          "load_roi_benchmarks": 50,
+          "total": 200
+        },
+        "with_framework": {
+          "load_framework_yaml": 10,
+          "access_all_configs": 0,
+          "total": 10
+        }
+      },
+      "frequency": "Per script execution",
+      "annual_estimate": {
+        "executions_per_year": 1000,
+        "total_savings": 190000
+      }
+    },
+    {
+      "operation": "Data Lookups",
+      "without_framework_tokens": 190,
+      "with_framework_tokens": 5,
+      "tokens_saved": 185,
+      "savings_percentage": 97.36842105263158,
+      "breakdown": {
+        "without_framework": {
+          "search_workflow_doc": 30,
+          "search_quickref_doc": 30,
+          "search_gatekeeper_script": 30,
+          "reconcile_differences": 100,
+          "total": 190
+        },
+        "with_framework": {
+          "query_framework": 5,
+          "total": 5
+        }
+      },
+      "frequency": "Per lookup operation",
+      "annual_estimate": {
+        "lookups_per_year": 500,
+        "total_savings": 92500
+      }
+    },
+    {
+      "operation": "Validation Operations",
+      "without_framework_tokens": 400,
+      "with_framework_tokens": 40,
+      "tokens_saved": 360,
+      "savings_percentage": 90.0,
+      "breakdown": {
+        "without_framework": {
+          "validate_strategic_goal": 100,
+          "validate_revenue_type": 100,
+          "validate_budget_tier": 100,
+          "check_consistency": 100,
+          "total": 400
+        },
+        "with_framework": {
+          "schema_validation": 20,
+          "framework_consistency": 20,
+          "total": 40
+        }
+      },
+      "frequency": "Per project validation",
+      "annual_estimate": {
+        "validations_per_year": 200,
+        "total_savings": 72000
+      }
+    },
+    {
+      "operation": "Context Building",
+      "without_framework_tokens": 500,
+      "with_framework_tokens": 50,
+      "tokens_saved": 450,
+      "savings_percentage": 90.0,
+      "breakdown": {
+        "without_framework": {
+          "load_5_doc_files": 200,
+          "load_3_script_files": 120.0,
+          "load_2_schema_files": 80.0,
+          "reconcile_context": 100,
+          "total": 500
+        },
+        "with_framework": {
+          "load_framework": 50,
+          "total": 50
+        }
+      },
+      "frequency": "Per AI session start",
+      "annual_estimate": {
+        "sessions_per_year": 2000,
+        "total_savings": 900000
+      }
+    },
+    {
+      "operation": "Devcontainer Operations",
+      "without_framework_tokens": 425,
+      "with_framework_tokens": 15,
+      "tokens_saved": 410,
+      "savings_percentage": 96.47058823529412,
+      "breakdown": {
+        "without_framework": {
+          "custom_build_auth": 50,
+          "build_context_upload": 100,
+          "layer_caching_checks": 75,
+          "build_log_parsing": 200,
+          "total": 425
+        },
+        "with_framework": {
+          "image_pull_cached": 10,
+          "container_start": 5,
+          "total": 15
+        }
+      },
+      "frequency": "Per devcontainer rebuild",
+      "annual_estimate": {
+        "rebuilds_per_year": 100,
+        "total_savings": 41000
+      }
+    },
+    {
+      "operation": "CI/CD Policy Checks",
+      "without_framework_tokens": 300,
+      "with_framework_tokens": 50,
+      "tokens_saved": 250,
+      "savings_percentage": 83.33333333333334,
+      "breakdown": {
+        "without_framework": {
+          "check_strategic_alignment": 75,
+          "check_budget_compliance": 75,
+          "check_approval_tier": 75,
+          "check_schema_compliance": 75,
+          "total": 300
+        },
+        "with_framework": {
+          "framework_validation": 25,
+          "schema_check": 25,
+          "total": 50
+        }
+      },
+      "frequency": "Per pull request",
+      "annual_estimate": {
+        "pull_requests_per_year": 500,
+        "total_savings": 125000
+      }
+    },
+    {
+      "operation": "Documentation Synchronization",
+      "without_framework_tokens": 550,
+      "with_framework_tokens": 40,
+      "tokens_saved": 510,
+      "savings_percentage": 92.72727272727272,
+      "breakdown": {
+        "without_framework": {
+          "update_workflow_doc": 150,
+          "update_quickref_doc": 150,
+          "update_gatekeeper_doc": 150,
+          "verify_consistency": 100,
+          "total": 550
+        },
+        "with_framework": {
+          "update_framework_yaml": 10,
+          "regenerate_docs": 30,
+          "total": 40
+        }
+      },
+      "frequency": "Per governance update",
+      "annual_estimate": {
+        "updates_per_year": 12,
+        "total_savings": 6120
+      }
+    }
+  ],
+  "methodology": {
+    "description": "Compares token usage for common operations with and without governance framework",
+    "token_costs": {
+      "load_hardcoded_config": 50,
+      "load_yaml_config": 10,
+      "lookup_scattered_data": 30,
+      "lookup_centralized_data": 5,
+      "manual_validation": 100,
+      "schema_validation": 20,
+      "build_context_scattered": 200,
+      "build_context_framework": 50,
+      "devcontainer_custom_build": 425,
+      "devcontainer_vendor_pull": 15,
+      "duplicate_policy_checks": 75,
+      "consolidated_policy_check": 25,
+      "manual_doc_sync": 150,
+      "auto_doc_generation": 30
+    },
+    "assumptions": [
+      "Token costs based on typical AI operation overhead",
+      "Annual frequency estimates based on team of 10 developers",
+      "Cost calculated at $0.01 per 1000 tokens",
+      "Includes direct token usage, not indirect time savings"
+    ]
+  }
+}

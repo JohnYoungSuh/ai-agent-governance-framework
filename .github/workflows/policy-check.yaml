@@ -1,0 +1,5 @@
+- name: Validate AI Governance Guardrails
+  run: |
+    python scripts/validate-schema.py \
+      --schema policies/schemas/audit-trail.json \
+      --data frameworks/agent-guardrail.yaml

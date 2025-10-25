@@ -1,0 +1,390 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://suhlabs.com/schemas/token-usage/v1.1",
+  "title": "AI Agent Token Usage Log",
+  "description": "Schema for tracking token consumption, efficiency, and human interaction quality in AI agent sessions (v1.1: Added gap analysis fixes)",
+  "type": "object",
+  "required": [
+    "session_id",
+    "timestamp",
+    "user_email",
+    "project_name",
+    "task_description",
+    "tokens_used",
+    "tokens_optimal",
+    "files_changed",
+    "efficiency_category"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "Unique identifier for the session (UUID or timestamp-based)",
+      "pattern": "^[a-f0-9-]{36}$|^[0-9]{8}-[0-9]{6}$",
+      "examples": ["550e8400-e29b-41d4-a716-446655440000", "20251023-143000"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when session completed"
+    },
+    "user_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email of human operator who initiated the session"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Full name of human operator (optional)",
+      "examples": ["John Young"]
+    },
+    "project_name": {
+      "type": "string",
+      "description": "Name of project or repository worked on",
+      "examples": ["ai-agent-governance-framework", "emass-client"]
+    },
+    "task_description": {
+      "type": "string",
+      "description": "Brief description of task performed (1-2 sentences)",
+      "minLength": 10,
+      "maxLength": 500,
+      "examples": ["Fork and customize internal repository with 5 file changes"]
+    },
+    "tokens_used": {
+      "type": "integer",
+      "description": "Total tokens consumed in the session",
+      "minimum": 0,
+      "examples": [25313, 10000, 67890]
+    },
+    "tokens_optimal": {
+      "type": "integer",
+      "description": "Estimated optimal token count if requirements were clear and execution was single-pass",
+      "minimum": 0,
+      "examples": [10000, 8000, 30000]
+    },
+    "efficiency_pct": {
+      "type": "number",
+      "description": "Efficiency percentage (tokens_optimal / tokens_used * 100)",
+      "minimum": 0,
+      "maximum": 100,
+      "examples": [39.5, 80.0, 95.2]
+    },
+    "waste_tokens": {
+      "type": "integer",
+      "description": "Wasted tokens (tokens_used - tokens_optimal)",
+      "minimum": 0,
+      "examples": [15313, 2000, 5000]
+    },
+    "waste_cost_usd": {
+      "type": "number",
+      "description": "Cost of wasted tokens in USD (waste_tokens * cost_per_token)",
+      "minimum": 0,
+      "examples": [0.046, 0.006, 0.015]
+    },
+    "files_changed": {
+      "type": "integer",
+      "description": "Number of files modified/created in the session",
+      "minimum": 0,
+      "examples": [5, 1, 12]
+    },
+    "clarification_rounds": {
+      "type": "integer",
+      "description": "Number of back-and-forth clarification exchanges before work could begin",
+      "minimum": 0,
+      "examples": [0, 3, 7]
+    },
+    "efficiency_category": {
+      "type": "string",
+      "enum": ["optimal", "acceptable", "inefficient", "severely_wasteful"],
+      "description": "Categorization of efficiency based on waste percentage"
+    },
+    "root_cause": {
+      "type": "string",
+      "enum": [
+        "vague_requirements",
+        "missing_file_paths",
+        "unclear_scope",
+        "multiple_approaches_not_specified",
+        "incomplete_context",
+        "midstream_requirement_changes",
+        "ai_agent_error",
+        "technical_issue",
+        "optimal_execution",
+        "other"
+      ],
+      "description": "Primary cause of inefficiency or reason for optimal execution"
+    },
+    "root_cause_detail": {
+      "type": "string",
+      "description": "Detailed explanation of root cause",
+      "maxLength": 1000,
+      "examples": [
+        "User said 'update governance files' without specifying which files or what changes",
+        "User provided complete requirements upfront, AI executed in single pass"
+      ]
+    },
+    "pattern_violated": {
+      "type": "array",
+      "description": "List of interaction patterns from HUMAN-AI-INTERACTION-GUIDE.md that were violated",
+      "items": {
+        "type": "string",
+        "enum": [
+          "complete_requirements_upfront",
+          "exact_file_paths",
+          "clarify_scope_upfront",
+          "batch_questions",
+          "document_for_future_sessions",
+          "single_pass_execution",
+          "demand_clarity_before_starting",
+          "avoid_yes_no_loops",
+          "none"
+        ]
+      },
+      "examples": [
+        ["complete_requirements_upfront", "exact_file_paths"],
+        ["none"]
+      ]
+    },
+    "human_quality_score": {
+      "type": "number",
+      "description": "Score (0-100) rating quality of human's initial requirements. 100 = perfect clarity, 0 = completely vague",
+      "minimum": 0,
+      "maximum": 100,
+      "examples": [30, 85, 100]
+    },
+    "ai_quality_score": {
+      "type": "number",
+      "description": "Score (0-100) rating AI agent's efficiency and adherence to protocols. 100 = optimal, 0 = severely inefficient",
+      "minimum": 0,
+      "maximum": 100,
+      "examples": [90, 65, 100]
+    },
+    "session_outcome": {
+      "type": "string",
+      "enum": ["completed", "partial", "abandoned", "blocked"],
+      "description": "Final outcome of the session"
+    },
+    "commits": {
+      "type": "array",
+      "description": "Git commit hashes produced in this session",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{7,40}$"
+      },
+      "examples": [["ec26bb2", "abc1234"]]
+    },
+    "agent_type": {
+      "type": "string",
+      "description": "Type/name of AI agent used",
+      "examples": ["Claude Sonnet 4.5", "Claude Code CLI", "GPT-4"]
+    },
+    "cost_per_1k_tokens": {
+      "type": "number",
+      "description": "Cost per 1000 tokens for this agent/model in USD",
+      "minimum": 0,
+      "examples": [0.003, 0.01, 0.06]
+    },
+    "total_cost_usd": {
+      "type": "number",
+      "description": "Total cost of session in USD (tokens_used * cost_per_1k_tokens / 1000)",
+      "minimum": 0,
+      "examples": [0.076, 0.03, 0.15]
+    },
+    "recommendations": {
+      "type": "array",
+      "description": "Specific recommendations for human to improve efficiency in future sessions",
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "examples": [
+        [
+          "Provide exact file paths instead of vague 'governance files'",
+          "List all required changes upfront instead of iteratively",
+          "Review token_optimization.md before next session"
+        ]
+      ]
+    },
+    "session_notes_created": {
+      "type": "boolean",
+      "description": "Whether SESSION-NOTES.md or similar tracking file was created for continuity"
+    },
+    "parent_session_id": {
+      "type": "string",
+      "description": "Session ID of previous session if this is a continuation (Gap #8: Session Continuation Tracking)",
+      "pattern": "^[a-f0-9-]{36}$|^[0-9]{8}-[0-9]{6}$",
+      "examples": ["20251023-120000"]
+    },
+    "is_continuation": {
+      "type": "boolean",
+      "description": "Whether this session continues work from a previous session"
+    },
+    "parent_session_documented": {
+      "type": "boolean",
+      "description": "Whether parent session created SESSION-NOTES.md (if continuation). Blame parent if false."
+    },
+    "workflow_type": {
+      "type": "string",
+      "enum": ["waterfall", "iterative", "exploratory", "emergency"],
+      "description": "Type of workflow (Gap #7: Iterative Workflows). Waterfall expects 80% efficiency, iterative 65%, exploratory 60%, emergency varies."
+    },
+    "task_type": {
+      "type": "string",
+      "enum": ["well_defined", "exploratory", "research", "emergency", "learning"],
+      "description": "Type of task (Gap #3: Context Switching). Adjusts efficiency expectations."
+    },
+    "ai_agent_failure": {
+      "type": "boolean",
+      "description": "Whether inefficiency was primarily due to AI agent failure vs. human vague requirements (Gap #5: AI Quality Control)"
+    },
+    "ai_agent_failure_detail": {
+      "type": "string",
+      "description": "Details of AI agent failure if ai_agent_failure=true",
+      "maxLength": 500
+    },
+    "task_description_sanitized": {
+      "type": "boolean",
+      "description": "Whether task description was sanitized to remove PII/sensitive info (Gap #11: Privacy)"
+    },
+    "collaborators": {
+      "type": "array",
+      "description": "Additional users who collaborated in this session (Gap #2: Multi-User Attribution)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["primary", "reviewer", "helper", "observer"]
+          },
+          "attribution_pct": {
+            "type": "number",
+            "description": "Percentage of efficiency score attributed to this collaborator",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["email", "role"]
+      }
+    },
+    "user_experience_level": {
+      "type": "string",
+      "enum": ["new", "intermediate", "experienced"],
+      "description": "User's experience level with AI agents (Gap #4: Learning Curve). New <30 days, intermediate 30-90 days, experienced >90 days."
+    },
+    "normalized_tokens_claude_sonnet_equiv": {
+      "type": "integer",
+      "description": "Tokens normalized to Claude Sonnet cost equivalent for fair comparison across models (Gap #6: Model Cost Variance)",
+      "minimum": 0
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional custom metadata",
+      "properties": {
+        "environment": {
+          "type": "string",
+          "enum": ["dev", "staging", "prod"],
+          "description": "Environment where work was performed"
+        },
+        "urgency": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Urgency level of the task"
+        },
+        "complexity": {
+          "type": "string",
+          "enum": ["trivial", "simple", "moderate", "complex", "very_complex"],
+          "description": "Subjective complexity of the task"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "efficiency_categories": {
+      "optimal": "80-100% efficiency (0-20% waste)",
+      "acceptable": "60-79% efficiency (21-40% waste)",
+      "inefficient": "40-59% efficiency (41-60% waste)",
+      "severely_wasteful": "0-39% efficiency (61-100% waste)"
+    }
+  },
+  "examples": [
+    {
+      "session_id": "20251023-143000",
+      "timestamp": "2025-10-23T14:30:00Z",
+      "user_email": "youngs@suhlabs.com",
+      "user_name": "John Young",
+      "project_name": "ai-agent-governance-framework",
+      "task_description": "Fork repository and apply internal customizations to 5 files",
+      "tokens_used": 25313,
+      "tokens_optimal": 10000,
+      "efficiency_pct": 39.5,
+      "waste_tokens": 15313,
+      "waste_cost_usd": 0.046,
+      "files_changed": 5,
+      "clarification_rounds": 3,
+      "efficiency_category": "severely_wasteful",
+      "root_cause": "vague_requirements",
+      "root_cause_detail": "User initially provided wrong file path, then 3 yes/no clarification rounds, requirements given iteratively instead of upfront",
+      "pattern_violated": [
+        "complete_requirements_upfront",
+        "exact_file_paths",
+        "batch_questions"
+      ],
+      "human_quality_score": 30,
+      "ai_quality_score": 70,
+      "session_outcome": "completed",
+      "commits": ["ec26bb2"],
+      "agent_type": "Claude Sonnet 4.5",
+      "cost_per_1k_tokens": 0.003,
+      "total_cost_usd": 0.076,
+      "recommendations": [
+        "Provide exact file paths at start: /home/user/prompts/context/goundrules.md",
+        "List all 5 file changes in one message instead of iteratively",
+        "Review token_optimization.md section 'Demand Complete Requirements Upfront'"
+      ],
+      "session_notes_created": false,
+      "metadata": {
+        "environment": "dev",
+        "urgency": "medium",
+        "complexity": "moderate"
+      }
+    },
+    {
+      "session_id": "20251023-160000",
+      "timestamp": "2025-10-23T16:00:00Z",
+      "user_email": "youngs@suhlabs.com",
+      "user_name": "John Young",
+      "project_name": "prompts",
+      "task_description": "Create token_optimization.md with efficiency rules",
+      "tokens_used": 8500,
+      "tokens_optimal": 8000,
+      "efficiency_pct": 94.1,
+      "waste_tokens": 500,
+      "waste_cost_usd": 0.0015,
+      "files_changed": 2,
+      "clarification_rounds": 0,
+      "efficiency_category": "optimal",
+      "root_cause": "optimal_execution",
+      "root_cause_detail": "User provided clear requirements upfront, AI executed in single pass",
+      "pattern_violated": ["none"],
+      "human_quality_score": 95,
+      "ai_quality_score": 95,
+      "session_outcome": "completed",
+      "commits": ["def5678"],
+      "agent_type": "Claude Sonnet 4.5",
+      "cost_per_1k_tokens": 0.003,
+      "total_cost_usd": 0.0255,
+      "recommendations": [
+        "Excellent session - continue this pattern of clear upfront requirements"
+      ],
+      "session_notes_created": true,
+      "metadata": {
+        "environment": "dev",
+        "urgency": "high",
+        "complexity": "moderate"
+      }
+    }
+  ]
+}

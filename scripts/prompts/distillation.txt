@@ -1,0 +1,508 @@
+# ============================================================================
+# Policy Distillation Prompt - Token-Efficient Governance System
+# ============================================================================
+# Version: v1.0
+# Date: 2025-10-25
+# Source: frameworks/governance-framework.yaml
+# Purpose: Convert complex large model decisions into cacheable simple rules
+# Guardrails: Preserves all 16 guardrail checks in distilled output
+# Compliance: Maintains NIST, DoD RMF, ISO 42001 control mappings
+# ============================================================================
+
+You are a policy distillation expert for the AI Agent Governance Framework. Convert complex governance decisions into simple, executable rules.
+
+FRAMEWORK CONTEXT:
+- 16 Guardrail Rules
+- 4 Agent Tiers (Tier 1-4: Assistant → Executor → Orchestrator → Autonomous)
+- 5 Action Categories (CREATE, MODIFY, DELETE, ACCESS, COMPLY)
+- Namespace isolation enforced
+- Simulation mode for destructive operations
+- Audit trail required for all actions
+
+YOUR TASK:
+Convert the large model governance decision below into THREE artifacts:
+1. Python function (executable rule)
+2. YAML policy entry (version control)
+3. Cache entry pattern (for future cache hits)
+
+COMPLEX DECISION INPUT:
+---
+Request: {complex_request}
+Namespace: {namespace}
+Agent: {agent_name}
+Agent Tier: {agent_tier}
+Action Category: {category}
+
+Large Model Decision:
+{large_model_output}
+---
+
+OUTPUT FORMAT:
+
+```python
+# File: policies/distilled_rules/{rule_id}.py
+"""
+Distilled Governance Rule: {rule_name}
+
+Source: Large model decision {timestamp}
+Confidence: {confidence}
+Applicable to: {agent_tier}, {category}, {subcategory}
+Guardrails: {guardrail_refs}
+"""
+
+from typing import Dict, Any
+from datetime import datetime
+import json
+
+def evaluate_{rule_id}(context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Governance rule: {brief_description}
+
+    Args:
+        context: Dictionary containing:
+            - namespace: str
+            - agent_name: str
+            - agent_tier: str (tier1, tier2, tier3, tier4)
+            - action_type: str
+            - target_resources: list
+            - environment: str (dev, staging, production)
+            - has_backup: bool (for MODIFY/DELETE)
+            - cost_estimate: float (USD)
+            - affected_resource_count: int
+
+    Returns:
+        Dict with:
+            - decision: "ALLOW" | "DENY"
+            - reason: str
+            - requires_confirmation: bool
+            - simulation_required: bool
+            - guardrails_checked: list
+            - audit_trail: dict
+    """
+
+    # Initialize result
+    result = {{
+        "decision": "DENY",
+        "reason": "",
+        "requires_confirmation": False,
+        "simulation_required": False,
+        "guardrails_checked": [],
+        "audit_trail": {{
+            "policy_version": "{rule_id}",
+            "timestamp": datetime.utcnow().isoformat(),
+            "evaluated_conditions": []
+        }}
+    }}
+
+    # Guardrail #1: Namespace isolation (REQUIRED FOR ALL)
+    if context["namespace"] not in context.get("allowed_namespaces", []):
+        result["reason"] = "Namespace not in allowed list (Guardrail #1)"
+        result["guardrails_checked"].append("1")
+        return result
+
+    # Add your condition checks here based on the large model decision
+    # Example structure:
+
+    # Condition 1: Check agent tier permission
+    required_tier = "{minimum_tier}"  # e.g., "tier2"
+    if not _check_tier_sufficient(context["agent_tier"], required_tier):
+        result["reason"] = f"Agent tier insufficient, requires {required_tier}"
+        result["guardrails_checked"].append("tier_enforcement")
+        return result
+    result["audit_trail"]["evaluated_conditions"].append("tier_check_passed")
+
+    # Condition 2: Environment restriction (if applicable)
+    if context.get("environment") == "production":
+        result["requires_confirmation"] = True
+        result["simulation_required"] = True
+        result["guardrails_checked"].extend(["2", "12"])
+        # Additional production checks here
+
+    # Condition 3: Resource limits (Guardrail #11)
+    if context.get("affected_resource_count", 0) > {resource_limit}:
+        result["reason"] = "Exceeds resource limit (Guardrail #11)"
+        result["guardrails_checked"].append("11")
+        return result
+    result["audit_trail"]["evaluated_conditions"].append("resource_limit_ok")
+
+    # Condition 4: Cost threshold
+    if context.get("cost_estimate", 0) > {cost_threshold}:
+        result["reason"] = "Exceeds cost threshold, requires approval"
+        return result
+    result["audit_trail"]["evaluated_conditions"].append("cost_ok")
+
+    # ALL CONDITIONS PASSED
+    result["decision"] = "ALLOW"
+    result["reason"] = "{success_reason}"
+    result["guardrails_checked"].extend({final_guardrail_list})
+
+    return result
+
+
+def _check_tier_sufficient(current_tier: str, required_tier: str) -> bool:
+    """Check if agent tier is sufficient for operation"""
+    tier_order = {{"tier1": 1, "tier2": 2, "tier3": 3, "tier4": 4}}
+    return tier_order.get(current_tier, 0) >= tier_order.get(required_tier, 0)
+
+
+# Test cases for validation
+TEST_CASES = [
+    {{
+        "name": "should_allow_dev",
+        "context": {{
+            "namespace": "my-project",
+            "agent_name": "test-agent",
+            "agent_tier": "{agent_tier}",
+            "action_type": "{action_type}",
+            "environment": "dev",
+            "allowed_namespaces": ["my-project"],
+            "affected_resource_count": 1,
+            "cost_estimate": 0.0
+        }},
+        "expected_decision": "ALLOW"
+    }},
+    {{
+        "name": "should_deny_wrong_namespace",
+        "context": {{
+            "namespace": "other-project",
+            "agent_name": "test-agent",
+            "agent_tier": "{agent_tier}",
+            "allowed_namespaces": ["my-project"]
+        }},
+        "expected_decision": "DENY"
+    }},
+    # Add more test cases based on the decision logic
+]
+```
+
+```yaml
+# File: policies/distilled_rules/{rule_id}.yml
+policy_id: {rule_id}
+policy_name: "{rule_name}"
+version: "1.0"
+created: {timestamp}
+distilled_from: large_model_decision
+confidence: {confidence}
+
+metadata:
+  category: {category}
+  subcategory: {subcategory}
+  risk_level: {risk_level}
+  agent_tier_required: {minimum_tier}
+
+cache_pattern:
+  agent: "{agent_pattern}"
+  namespace: "{namespace_pattern}"
+  action: "{action_type}"
+  environment: "{environment_pattern}"
+  key_template: "{agent_tier}:{category}:{subcategory}:{environment}"
+
+guardrails_enforced:
+{guardrail_yaml_list}
+
+conditions:
+  namespace_isolation:
+    type: mandatory
+    guardrail: "1"
+    check: "namespace in allowed_namespaces"
+
+  tier_enforcement:
+    type: mandatory
+    check: "agent_tier >= {minimum_tier}"
+
+  # Add other conditions from large model decision
+
+decision_logic:
+  type: all_conditions_must_pass
+  on_failure: DENY
+  on_success: ALLOW
+  requires_confirmation: {requires_confirmation}
+  simulation_required: {simulation_required}
+
+test_coverage:
+  total_cases: {test_count}
+  last_validated: {timestamp}
+  validation_status: pending
+
+integration:
+  simple_rules_engine: true
+  cache_eligible: true
+  ttl_seconds: 3600
+```
+
+```python
+# Cache entry for governance router
+CACHE_ENTRY = {{
+    "cache_key": "{cache_key}",
+    "rule_id": "{rule_id}",
+    "rule_file": "policies/distilled_rules/{rule_id}.py",
+    "function_name": "evaluate_{rule_id}",
+    "requires_context": {required_context_fields},
+    "ttl": 3600,
+    "created": "{timestamp}",
+    "confidence": {confidence},
+    "last_used": None,
+    "use_count": 0
+}}
+```
+
+EXAMPLE DISTILLATION:
+
+INPUT:
+---
+Request: "Can deploy-agent create a Kubernetes Service in dev namespace?"
+Namespace: my-project
+Agent: deploy-agent
+Agent Tier: tier3
+Action Category: CREATE
+
+Large Model Decision:
+"This request should be ALLOWED with the following conditions:
+1. Agent must be Tier 3 or higher (Orchestrator capability)
+2. Namespace must be 'dev' or 'staging' (not production)
+3. Service type must not be LoadBalancer (cost control)
+4. Agent must have 'deploy:services' permission in namespace
+5. Resource quota must not be exceeded (max 10 services per namespace)
+6. Must include proper labels (app, env, owner)
+
+Guardrails enforced: #1 (namespace), #3 (orchestration), #11 (quotas), #14 (CI/CD)
+
+If production namespace: DENY and escalate to human approval.
+If all conditions pass: ALLOW without confirmation (low risk in dev)."
+---
+
+OUTPUT:
+
+```python
+# File: policies/distilled_rules/k8s_service_create_dev.py
+"""
+Distilled Governance Rule: Kubernetes Service Creation in Dev
+
+Source: Large model decision 2025-10-25T10:00:00Z
+Confidence: 0.92
+Applicable to: tier3, CREATE, kubernetes_service
+Guardrails: 1, 3, 11, 14
+"""
+
+from typing import Dict, Any
+from datetime import datetime
+
+def evaluate_k8s_service_create_dev(context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Governance rule: Allow Tier3+ agents to create K8s services in dev/staging
+
+    Args:
+        context: Dictionary with namespace, agent_tier, environment, etc.
+
+    Returns:
+        Dict with decision, reason, guardrails_checked
+    """
+
+    result = {{
+        "decision": "DENY",
+        "reason": "",
+        "requires_confirmation": False,
+        "simulation_required": False,
+        "guardrails_checked": [],
+        "audit_trail": {{
+            "policy_version": "k8s_service_create_dev_v1",
+            "timestamp": datetime.utcnow().isoformat(),
+            "evaluated_conditions": []
+        }}
+    }}
+
+    # Guardrail #1: Namespace isolation
+    if context["namespace"] not in context.get("allowed_namespaces", []):
+        result["reason"] = "Namespace not allowed (Guardrail #1)"
+        result["guardrails_checked"].append("1")
+        return result
+
+    # Check 1: Agent tier (Tier 3 required)
+    if not _check_tier_sufficient(context["agent_tier"], "tier3"):
+        result["reason"] = "Requires Tier 3 or higher (Orchestrator)"
+        return result
+    result["audit_trail"]["evaluated_conditions"].append("tier_check_passed")
+
+    # Check 2: Environment (dev or staging only)
+    if context.get("environment") not in ["dev", "staging"]:
+        result["reason"] = "Production deployments require human approval (Guardrail #3)"
+        result["guardrails_checked"].append("3")
+        return result
+    result["audit_trail"]["evaluated_conditions"].append("environment_ok")
+
+    # Check 3: Service type restriction
+    if context.get("service_type") == "LoadBalancer":
+        result["reason"] = "LoadBalancer requires cost approval"
+        return result
+
+    # Check 4: Permission check
+    if not context.get("has_permission"):
+        result["reason"] = "Missing 'deploy:services' permission"
+        return result
+
+    # Check 5: Resource quota (Guardrail #11)
+    existing_services = context.get("existing_service_count", 0)
+    if existing_services >= 10:
+        result["reason"] = "Service quota exceeded (max 10 per namespace, Guardrail #11)"
+        result["guardrails_checked"].append("11")
+        return result
+    result["audit_trail"]["evaluated_conditions"].append("quota_ok")
+
+    # Check 6: Labels validation (Guardrail #14 - CI/CD compliance)
+    required_labels = ["app", "env", "owner"]
+    labels = context.get("labels", {})
+    if not all(label in labels for label in required_labels):
+        result["reason"] = "Missing required labels (Guardrail #14)"
+        result["guardrails_checked"].append("14")
+        return result
+
+    # ALL CONDITIONS PASSED
+    result["decision"] = "ALLOW"
+    result["reason"] = "All conditions met for dev/staging service creation"
+    result["guardrails_checked"].extend(["1", "3", "11", "14"])
+
+    return result
+
+
+def _check_tier_sufficient(current_tier: str, required_tier: str) -> bool:
+    tier_order = {{"tier1": 1, "tier2": 2, "tier3": 3, "tier4": 4}}
+    return tier_order.get(current_tier, 0) >= tier_order.get(required_tier, 0)
+
+
+TEST_CASES = [
+    {{
+        "name": "allow_dev_with_all_conditions",
+        "context": {{
+            "namespace": "my-project",
+            "agent_tier": "tier3",
+            "environment": "dev",
+            "service_type": "ClusterIP",
+            "has_permission": True,
+            "existing_service_count": 5,
+            "labels": {{"app": "web", "env": "dev", "owner": "team-a"}},
+            "allowed_namespaces": ["my-project"]
+        }},
+        "expected_decision": "ALLOW"
+    }},
+    {{
+        "name": "deny_production_environment",
+        "context": {{
+            "namespace": "my-project",
+            "agent_tier": "tier3",
+            "environment": "production",
+            "allowed_namespaces": ["my-project"]
+        }},
+        "expected_decision": "DENY"
+    }}
+]
+```
+
+```yaml
+# File: policies/distilled_rules/k8s_service_create_dev.yml
+policy_id: k8s_service_create_dev_v1
+policy_name: "Kubernetes Service Creation in Dev/Staging"
+version: "1.0"
+created: 2025-10-25T10:00:00Z
+distilled_from: large_model_decision
+confidence: 0.92
+
+metadata:
+  category: CREATE
+  subcategory: kubernetes_service
+  risk_level: medium
+  agent_tier_required: tier3
+
+cache_pattern:
+  agent: "deploy-agent|orchestrator-*"
+  namespace: "*"
+  action: "create"
+  environment: "dev|staging"
+  key_template: "tier3:create:k8s_service:{environment}"
+
+guardrails_enforced:
+  - id: "1"
+    name: "Namespace isolation"
+  - id: "3"
+    name: "Orchestration responsibility"
+  - id: "11"
+    name: "Resource quotas"
+  - id: "14"
+    name: "CI/CD compliance"
+
+conditions:
+  namespace_isolation:
+    type: mandatory
+    guardrail: "1"
+
+  tier_enforcement:
+    type: mandatory
+    minimum_tier: "tier3"
+
+  environment_restriction:
+    type: mandatory
+    allowed: ["dev", "staging"]
+    denied: ["production"]
+
+  service_type:
+    type: restriction
+    denied: ["LoadBalancer"]
+    reason: "Cost control"
+
+  quota_check:
+    type: mandatory
+    max_services: 10
+
+  label_validation:
+    type: mandatory
+    required_labels: ["app", "env", "owner"]
+
+decision_logic:
+  type: all_conditions_must_pass
+  on_failure: DENY
+  on_success: ALLOW
+  requires_confirmation: false
+  simulation_required: false
+
+test_coverage:
+  total_cases: 8
+  last_validated: 2025-10-25
+  validation_status: passed
+```
+
+```python
+CACHE_ENTRY = {{
+    "cache_key": "tier3:create:k8s_service:dev",
+    "rule_id": "k8s_service_create_dev_v1",
+    "rule_file": "policies/distilled_rules/k8s_service_create_dev.py",
+    "function_name": "evaluate_k8s_service_create_dev",
+    "requires_context": [
+        "namespace",
+        "agent_tier",
+        "environment",
+        "service_type",
+        "has_permission",
+        "existing_service_count",
+        "labels",
+        "allowed_namespaces"
+    ],
+    "ttl": 3600,
+    "created": "2025-10-25T10:00:00Z",
+    "confidence": 0.92,
+    "last_used": None,
+    "use_count": 0
+}}
+```
+
+NOW DISTILL THIS DECISION:
+---
+Request: {complex_request}
+Namespace: {namespace}
+Agent: {agent_name}
+Agent Tier: {agent_tier}
+Action Category: {category}
+
+Large Model Decision:
+{large_model_output}
+---
+
+Generate the THREE code blocks (Python function, YAML policy, Cache entry):

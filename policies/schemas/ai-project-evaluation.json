@@ -1,0 +1,314 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Project Evaluation",
+  "description": "Schema for AI agent evaluation of project creation requests before human review",
+  "type": "object",
+  "required": [
+    "evaluation_id",
+    "timestamp",
+    "request_id",
+    "ai_agent_id",
+    "evaluation_result",
+    "scoring",
+    "recommendation",
+    "analysis"
+  ],
+  "properties": {
+    "evaluation_id": {
+      "type": "string",
+      "description": "Unique identifier for this evaluation",
+      "pattern": "^EVAL-[0-9]{4}-[0-9]{4}$",
+      "examples": ["EVAL-2025-0001"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of evaluation"
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Reference to project creation request being evaluated",
+      "pattern": "^PCR-[0-9]{4}-[0-9]{4}$"
+    },
+    "ai_agent_id": {
+      "type": "string",
+      "description": "Identifier of AI agent performing evaluation",
+      "examples": ["project-gatekeeper-agent-v1"]
+    },
+    "ai_agent_tier": {
+      "type": "integer",
+      "description": "Tier of AI agent performing evaluation (typically Tier 2 or 3)",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "evaluation_result": {
+      "type": "string",
+      "enum": ["APPROVED", "REJECTED", "NEEDS_REVISION", "ESCALATE_TO_HUMAN"],
+      "description": "Overall evaluation decision"
+    },
+    "scoring": {
+      "type": "object",
+      "required": ["total_score", "threshold", "category_scores"],
+      "properties": {
+        "total_score": {
+          "type": "number",
+          "description": "Overall score (0-100)",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Minimum score required for approval",
+          "default": 60
+        },
+        "pass": {
+          "type": "boolean",
+          "description": "Whether total score meets threshold"
+        },
+        "category_scores": {
+          "type": "object",
+          "required": [
+            "strategic_alignment",
+            "financial_viability",
+            "resource_feasibility",
+            "risk_assessment",
+            "business_case_quality"
+          ],
+          "properties": {
+            "strategic_alignment": {
+              "type": "object",
+              "required": ["score", "max_score", "weight", "rationale"],
+              "properties": {
+                "score": {"type": "number", "minimum": 0, "maximum": 20},
+                "max_score": {"type": "number", "default": 20},
+                "weight": {"type": "number", "default": 0.25},
+                "rationale": {"type": "string"},
+                "findings": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              }
+            },
+            "financial_viability": {
+              "type": "object",
+              "required": ["score", "max_score", "weight", "rationale"],
+              "properties": {
+                "score": {"type": "number", "minimum": 0, "maximum": 25},
+                "max_score": {"type": "number", "default": 25},
+                "weight": {"type": "number", "default": 0.30},
+                "rationale": {"type": "string"},
+                "roi_check": {"type": "boolean"},
+                "roi_value": {"type": "number"},
+                "findings": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              }
+            },
+            "resource_feasibility": {
+              "type": "object",
+              "required": ["score", "max_score", "weight", "rationale"],
+              "properties": {
+                "score": {"type": "number", "minimum": 0, "maximum": 20},
+                "max_score": {"type": "number", "default": 20},
+                "weight": {"type": "number", "default": 0.20},
+                "rationale": {"type": "string"},
+                "findings": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              }
+            },
+            "risk_assessment": {
+              "type": "object",
+              "required": ["score", "max_score", "weight", "rationale"],
+              "properties": {
+                "score": {"type": "number", "minimum": 0, "maximum": 20},
+                "max_score": {"type": "number", "default": 20},
+                "weight": {"type": "number", "default": 0.15},
+                "rationale": {"type": "string"},
+                "red_flags": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              }
+            },
+            "business_case_quality": {
+              "type": "object",
+              "required": ["score", "max_score", "weight", "rationale"],
+              "properties": {
+                "score": {"type": "number", "minimum": 0, "maximum": 15},
+                "max_score": {"type": "number", "default": 15},
+                "weight": {"type": "number", "default": 0.10},
+                "rationale": {"type": "string"},
+                "completeness": {"type": "number", "minimum": 0, "maximum": 100},
+                "clarity": {"type": "number", "minimum": 0, "maximum": 100}
+              }
+            }
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "required": ["action", "confidence", "summary"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "PROCEED_TO_LEADERSHIP",
+            "REJECT_SEND_FEEDBACK",
+            "REQUEST_REVISION",
+            "AUTO_APPROVE"
+          ]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["High (>85%)", "Medium (60-85%)", "Low (<60%)"]
+        },
+        "summary": {
+          "type": "string",
+          "description": "Executive summary of recommendation"
+        },
+        "reasoning": {
+          "type": "string",
+          "description": "Detailed reasoning for recommendation"
+        }
+      }
+    },
+    "analysis": {
+      "type": "object",
+      "properties": {
+        "strategic_alignment_check": {
+          "type": "object",
+          "properties": {
+            "goal_matches_description": {"type": "boolean"},
+            "goal_is_company_priority": {"type": "boolean"},
+            "explanation_is_clear": {"type": "boolean"},
+            "alignment_strength": {"type": "string", "enum": ["Strong", "Moderate", "Weak", "None"]},
+            "details": {"type": "string"}
+          }
+        },
+        "financial_analysis": {
+          "type": "object",
+          "properties": {
+            "roi_ratio": {"type": "number"},
+            "roi_acceptable": {"type": "boolean"},
+            "payback_period_months": {"type": "number"},
+            "payback_acceptable": {"type": "boolean"},
+            "confidence_justified": {"type": "boolean"},
+            "calculation_reasonable": {"type": "boolean"},
+            "details": {"type": "string"}
+          }
+        },
+        "resource_analysis": {
+          "type": "object",
+          "properties": {
+            "budget_appropriate_for_tier": {"type": "boolean"},
+            "human_resources_identified": {"type": "boolean"},
+            "timeline_realistic": {"type": "boolean"},
+            "details": {"type": "string"}
+          }
+        },
+        "risk_flags": {
+          "type": "object",
+          "properties": {
+            "unrealistic_roi": {"type": "boolean"},
+            "vague_business_case": {"type": "boolean"},
+            "misaligned_goal": {"type": "boolean"},
+            "insufficient_justification": {"type": "boolean"},
+            "compliance_concerns": {"type": "boolean"},
+            "budget_concerns": {"type": "boolean"},
+            "details": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "comparison_to_similar_projects": {
+          "type": "object",
+          "properties": {
+            "similar_projects_found": {"type": "boolean"},
+            "avg_roi_for_similar": {"type": "number"},
+            "avg_budget_for_similar": {"type": "number"},
+            "this_project_within_norms": {"type": "boolean"},
+            "details": {"type": "string"}
+          }
+        }
+      }
+    },
+    "required_revisions": {
+      "type": "array",
+      "description": "List of revisions required if status is NEEDS_REVISION",
+      "items": {
+        "type": "object",
+        "required": ["category", "issue", "suggested_fix"],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": ["Strategic Alignment", "Financial Justification", "Resource Planning", "Risk Management", "Business Case Quality"]
+          },
+          "issue": {"type": "string"},
+          "suggested_fix": {"type": "string"},
+          "severity": {
+            "type": "string",
+            "enum": ["Critical", "Important", "Minor"]
+          }
+        }
+      }
+    },
+    "auto_approval_eligible": {
+      "type": "object",
+      "description": "Check if project meets criteria for auto-approval without human review",
+      "properties": {
+        "eligible": {"type": "boolean"},
+        "criteria_met": {
+          "type": "object",
+          "properties": {
+            "low_budget": {"type": "boolean", "description": "Budget < $500/mo"},
+            "high_score": {"type": "boolean", "description": "Total score > 80"},
+            "strong_alignment": {"type": "boolean", "description": "Strategic alignment score > 16/20"},
+            "good_roi": {"type": "boolean", "description": "ROI > 3:1"},
+            "low_risk": {"type": "boolean", "description": "No red flags"}
+          }
+        },
+        "rationale": {"type": "string"}
+      }
+    },
+    "human_review_notes": {
+      "type": "object",
+      "description": "Notes for human reviewers if escalated",
+      "properties": {
+        "key_points": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "areas_needing_attention": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "questions_for_requester": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "audit_trail": {
+      "type": "object",
+      "properties": {
+        "evaluation_duration_ms": {"type": "number"},
+        "ai_model_used": {"type": "string"},
+        "evaluation_version": {"type": "string"},
+        "human_override": {
+          "type": "object",
+          "properties": {
+            "overridden": {"type": "boolean"},
+            "overridden_by": {"type": "string"},
+            "override_reason": {"type": "string"},
+            "override_timestamp": {"type": "string", "format": "date-time"}
+          }
+        }
+      }
+    }
+  }
+}

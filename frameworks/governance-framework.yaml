@@ -1,0 +1,527 @@
+---
+# AI Agent Governance Framework - Master Configuration
+# This is the SINGLE SOURCE OF TRUTH for all governance data
+# All scripts and documentation should reference this file
+
+version: "1.0"
+metadata:
+  title: "AI Agent Governance Framework - Master Configuration"
+  namespace: "%project_name$"
+  updated: "2025-10-23"
+  maintainer: "Governance Working Group"
+  description: |
+    Central configuration for all governance rules, strategic goals,
+    approval tiers, revenue types, and evaluation criteria.
+
+# ============================================================================
+# STRATEGIC GOALS
+# Referenced by: docs/LEADERSHIP-APPROVAL-*.md, scripts/*-gatekeeper.py
+# ============================================================================
+strategic_goals:
+  - id: "cost_reduction"
+    name: "Cost Reduction"
+    description: "Reduce operational or infrastructure costs"
+    weight: 1.0
+
+  - id: "revenue_growth"
+    name: "Revenue Growth"
+    description: "Generate new revenue streams or increase existing revenue"
+    weight: 1.2
+
+  - id: "efficiency_improvement"
+    name: "Efficiency Improvement"
+    description: "Improve team productivity or process efficiency"
+    weight: 1.0
+
+  - id: "customer_satisfaction"
+    name: "Customer Satisfaction"
+    description: "Enhance customer experience or satisfaction metrics"
+    weight: 1.1
+
+  - id: "compliance_security"
+    name: "Compliance & Security"
+    description: "Meet regulatory requirements or improve security posture"
+    weight: 1.3
+
+  - id: "innovation"
+    name: "Innovation"
+    description: "Develop new capabilities or competitive advantages"
+    weight: 0.9
+
+  - id: "scalability"
+    name: "Scalability"
+    description: "Enable business growth or system scaling"
+    weight: 1.0
+
+  - id: "risk_mitigation"
+    name: "Risk Mitigation"
+    description: "Reduce business, operational, or technical risks"
+    weight: 1.2
+
+  - id: "market_expansion"
+    name: "Market Expansion"
+    description: "Enter new markets or expand market share"
+    weight: 1.1
+
+# ============================================================================
+# REVENUE IMPACT TYPES
+# Referenced by: docs/LEADERSHIP-APPROVAL-*.md, scripts/*-gatekeeper.py
+# ============================================================================
+revenue_impact_types:
+  - id: "direct_revenue"
+    name: "Direct Revenue"
+    description: "Generates revenue directly through sales or subscriptions"
+    scoring_multiplier: 1.5
+
+  - id: "cost_avoidance"
+    name: "Cost Avoidance"
+    description: "Prevents future costs or reduces waste"
+    scoring_multiplier: 1.2
+
+  - id: "efficiency_gain"
+    name: "Efficiency Gain"
+    description: "Improves productivity, measured in time/resource savings"
+    scoring_multiplier: 1.1
+
+  - id: "customer_retention"
+    name: "Customer Retention"
+    description: "Reduces churn or improves customer lifetime value"
+    scoring_multiplier: 1.3
+
+  - id: "market_positioning"
+    name: "Market Positioning"
+    description: "Improves competitive position or brand value"
+    scoring_multiplier: 1.0
+
+  - id: "compliance_enablement"
+    name: "Compliance Enablement"
+    description: "Enables business operations through regulatory compliance"
+    scoring_multiplier: 1.4
+
+  - id: "risk_reduction"
+    name: "Risk Reduction"
+    description: "Reduces financial, operational, or reputational risk"
+    scoring_multiplier: 1.3
+
+  - id: "innovation_platform"
+    name: "Innovation Platform"
+    description: "Enables future revenue opportunities or capabilities"
+    scoring_multiplier: 0.9
+
+  - id: "technical_debt"
+    name: "Technical Debt Reduction"
+    description: "Reduces technical debt, improves maintainability"
+    scoring_multiplier: 0.8
+
+# ============================================================================
+# APPROVAL TIERS (Budget-Based)
+# Referenced by: docs/LEADERSHIP-APPROVAL-*.md, scripts/*-gatekeeper.py
+# ============================================================================
+approval_tiers:
+  - tier: 1
+    name: "Team Lead"
+    budget_range:
+      min: 0
+      max: 5000
+      currency: "USD"
+    approval_authority: "Team Lead or Senior Engineer"
+    review_time_sla: "24 hours"
+    requirements:
+      - "Technical feasibility documented"
+      - "Token usage estimate provided"
+
+  - tier: 2
+    name: "Manager"
+    budget_range:
+      min: 5001
+      max: 25000
+      currency: "USD"
+    approval_authority: "Engineering Manager"
+    review_time_sla: "48 hours"
+    requirements:
+      - "Business case documented"
+      - "ROI estimate provided"
+      - "Resource allocation plan"
+
+  - tier: 3
+    name: "Director"
+    budget_range:
+      min: 25001
+      max: 100000
+      currency: "USD"
+    approval_authority: "Director or VP Engineering"
+    review_time_sla: "5 business days"
+    requirements:
+      - "Comprehensive business case"
+      - "Strategic alignment documented"
+      - "Risk assessment completed"
+      - "Alternative solutions evaluated"
+
+  - tier: 4
+    name: "VP/Executive"
+    budget_range:
+      min: 100001
+      max: 500000
+      currency: "USD"
+    approval_authority: "VP or C-level Executive"
+    review_time_sla: "10 business days"
+    requirements:
+      - "Executive summary"
+      - "Multi-year financial model"
+      - "Strategic impact analysis"
+      - "Board presentation deck"
+
+  - tier: 5
+    name: "Executive Committee"
+    budget_range:
+      min: 500001
+      max: null  # unlimited
+      currency: "USD"
+    approval_authority: "Executive Committee or Board"
+    review_time_sla: "15-30 business days"
+    requirements:
+      - "Board-level documentation"
+      - "Full financial due diligence"
+      - "Strategic transformation plan"
+      - "Risk mitigation strategy"
+      - "External validation (if applicable)"
+
+# ============================================================================
+# EVALUATION CRITERIA & SCORING
+# Referenced by: scripts/ai-project-gatekeeper.py, schemas/*.json
+# ============================================================================
+evaluation_criteria:
+  strategic_alignment:
+    weight: 0.30
+    min_score: 0
+    max_score: 100
+    pass_threshold: 70
+    description: "Alignment with organizational strategic goals"
+
+  financial_viability:
+    weight: 0.25
+    min_score: 0
+    max_score: 100
+    pass_threshold: 60
+    description: "ROI, cost-benefit analysis, budget fit"
+
+  technical_feasibility:
+    weight: 0.20
+    min_score: 0
+    max_score: 100
+    pass_threshold: 70
+    description: "Technical complexity, skills available, dependencies"
+
+  resource_availability:
+    weight: 0.15
+    min_score: 0
+    max_score: 100
+    pass_threshold: 60
+    description: "Team capacity, infrastructure, tools"
+
+  risk_assessment:
+    weight: 0.10
+    min_score: 0
+    max_score: 100
+    pass_threshold: 50
+    description: "Technical, operational, and business risks"
+
+# Overall approval threshold (weighted average)
+overall_approval_threshold: 70
+
+# ============================================================================
+# ROI CALCULATION BENCHMARKS
+# Referenced by: scripts/ai-project-gatekeeper.py, submit-project-approval.py
+# ============================================================================
+roi_benchmarks:
+  excellent:
+    min_roi_percentage: 200
+    score: 95
+    description: "Exceptional return on investment"
+
+  very_good:
+    min_roi_percentage: 100
+    score: 85
+    description: "Strong return on investment"
+
+  good:
+    min_roi_percentage: 50
+    score: 75
+    description: "Solid return on investment"
+
+  acceptable:
+    min_roi_percentage: 25
+    score: 60
+    description: "Acceptable return on investment"
+
+  marginal:
+    min_roi_percentage: 0
+    score: 40
+    description: "Marginal or breakeven"
+
+  negative:
+    min_roi_percentage: -100
+    score: 20
+    description: "Negative return on investment"
+
+# Payback period expectations (months)
+payback_period:
+  fast:
+    max_months: 6
+    score_bonus: 15
+  moderate:
+    max_months: 12
+    score_bonus: 10
+  slow:
+    max_months: 24
+    score_bonus: 5
+  very_slow:
+    max_months: 36
+    score_bonus: 0
+
+# ============================================================================
+# TOKEN ACCOUNTABILITY
+# Referenced by: policies/token-accountability-policy.md, scripts/log-token-usage.py
+# ============================================================================
+token_accountability:
+  budgets:
+    development:
+      daily_limit: 10000
+      monthly_limit: 200000
+      alert_threshold_percentage: 80
+
+    testing:
+      daily_limit: 5000
+      monthly_limit: 100000
+      alert_threshold_percentage: 75
+
+    production:
+      daily_limit: 50000
+      monthly_limit: 1000000
+      alert_threshold_percentage: 90
+
+  pricing:
+    cost_per_1k_tokens: 0.01
+    currency: "USD"
+
+  waste_thresholds:
+    # If actual usage exceeds expected by this percentage, flag as waste
+    warning_percentage: 20
+    critical_percentage: 50
+
+  optimization_targets:
+    # Target efficiency improvements
+    devcontainer_rebuild_tokens: 15  # vs 425 for custom builds
+    code_generation_cache_hit_rate: 0.85
+    api_retry_reduction_target: 0.90
+
+# ============================================================================
+# DEVCONTAINER STANDARDS
+# Referenced by: docs/DEVCONTAINER-*.md, templates/.devcontainer/*.json
+# ============================================================================
+devcontainer_standards:
+  vendor_images:
+    preferred_registries:
+      - "mcr.microsoft.com/devcontainers"
+      - "ghcr.io"
+      - "docker.io/library"
+
+    require_digest_pinning: true
+    allow_custom_builds: false  # Requires justification
+
+    token_savings:
+      custom_build_tokens: 425
+      vendor_pull_tokens: 15
+      savings_percentage: 96
+
+    time_savings:
+      custom_build_minutes: 10
+      vendor_pull_minutes: 2
+      savings_percentage: 80
+
+  compliance_requirements:
+    - "Image must be from approved registry"
+    - "Image must be pinned by SHA256 digest"
+    - "Specifications must be mounted read-only"
+    - "Custom builds require written justification"
+
+# ============================================================================
+# AGENT CLASSIFICATION
+# Referenced by: docs/GOVERNANCE-POLICY.md, frameworks/agent-guardrail.yaml
+# ============================================================================
+agent_tiers:
+  tier_1_assistant:
+    name: "Assistant (Read-Only)"
+    autonomy_level: "None"
+    risk_level: "Low"
+    approval_required: false
+    capabilities:
+      - "Read files and data"
+      - "Answer questions"
+      - "Provide recommendations"
+    restrictions:
+      - "No write operations"
+      - "No external API calls"
+      - "No code execution"
+
+  tier_2_executor:
+    name: "Executor (Supervised)"
+    autonomy_level: "Low"
+    risk_level: "Medium"
+    approval_required: true
+    capabilities:
+      - "Execute pre-approved scripts"
+      - "Modify files with confirmation"
+      - "Run tests and builds"
+    restrictions:
+      - "Confirmation required for changes"
+      - "No production deployments"
+      - "No infrastructure changes"
+
+  tier_3_orchestrator:
+    name: "Orchestrator (Semi-Autonomous)"
+    autonomy_level: "Medium"
+    risk_level: "High"
+    approval_required: true
+    capabilities:
+      - "Multi-step workflows"
+      - "CI/CD pipeline execution"
+      - "Development deployments"
+    restrictions:
+      - "Production changes require approval"
+      - "Budget caps enforced"
+      - "Audit trail required"
+
+  tier_4_autonomous:
+    name: "Autonomous (Full Authority)"
+    autonomy_level: "High"
+    risk_level: "Critical"
+    approval_required: true
+    capabilities:
+      - "Full SDLC automation"
+      - "Production deployments"
+      - "Infrastructure as code"
+    restrictions:
+      - "Human oversight required"
+      - "Real-time monitoring"
+      - "Rollback capability mandatory"
+
+# ============================================================================
+# COMPLIANCE & SECURITY
+# Referenced by: docs/GOVERNANCE-POLICY.md
+# ============================================================================
+compliance_frameworks:
+  - name: "NIST 800-53"
+    applicable: true
+    controls:
+      - "AC-2: Account Management"
+      - "AU-2: Audit Events"
+      - "IA-2: Identification and Authentication"
+
+  - name: "DoD RMF"
+    applicable: true
+    controls:
+      - "Categorization"
+      - "Security Control Selection"
+      - "Authorization"
+
+  - name: "ISO 42001"
+    applicable: true
+    controls:
+      - "AI Management System"
+      - "Risk Assessment"
+      - "Continuous Monitoring"
+
+security_requirements:
+  secret_management:
+    - "Never expose secrets in logs or outputs"
+    - "Use approved secret stores only"
+    - "Rotate secrets regularly"
+
+  access_control:
+    - "Namespace-based isolation"
+    - "Least privilege principle"
+    - "MFA for production access"
+
+  audit_logging:
+    - "Structured JSON format"
+    - "Immutable audit trail"
+    - "Retain for minimum 1 year"
+
+# ============================================================================
+# CI/CD ENFORCEMENT
+# Referenced by: .github/workflows/*.yaml
+# ============================================================================
+ci_cd_gates:
+  pre_commit:
+    - name: "Devcontainer validation"
+      enabled: true
+      blocking: true
+    - name: "Schema validation"
+      enabled: true
+      blocking: true
+    - name: "Secret scanning"
+      enabled: true
+      blocking: true
+
+  pull_request:
+    - name: "Policy compliance check"
+      enabled: true
+      blocking: true
+    - name: "Token usage estimate"
+      enabled: true
+      blocking: false
+    - name: "Security scan"
+      enabled: true
+      blocking: true
+
+  pre_deployment:
+    - name: "Approval workflow"
+      enabled: true
+      blocking: true
+    - name: "Budget validation"
+      enabled: true
+      blocking: true
+
+# ============================================================================
+# NOTIFICATIONS & ESCALATION
+# ============================================================================
+notifications:
+  token_budget_exceeded:
+    recipients: ["engineering-leads@example.com"]
+    severity: "warning"
+
+  approval_required:
+    recipients: ["approvers@example.com"]
+    severity: "info"
+
+  security_violation:
+    recipients: ["security-team@example.com"]
+    severity: "critical"
+
+escalation_paths:
+  - level: 1
+    trigger: "Budget threshold reached (80%)"
+    action: "Notify team lead"
+
+  - level: 2
+    trigger: "Budget exceeded"
+    action: "Block new operations, notify manager"
+
+  - level: 3
+    trigger: "Security violation detected"
+    action: "Immediate halt, notify security team"
+
+# ============================================================================
+# METADATA & VERSIONING
+# ============================================================================
+document_control:
+  version: "1.0"
+  status: "Active"
+  effective_date: "2025-10-23"
+  next_review_date: "2026-04-23"
+  change_history:
+    - version: "1.0"
+      date: "2025-10-23"
+      author: "Governance Working Group"
+      changes: "Initial consolidated framework"

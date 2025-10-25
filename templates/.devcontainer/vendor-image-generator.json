@@ -1,0 +1,50 @@
+{
+  "// TEMPLATE": "Devcontainer using vendor image for code generation",
+  "// REPLACE": "All {{PLACEHOLDER}} values before use",
+
+  "name": "{{PROJECT_NAME}} - Generator Workflow",
+
+  "// ✅ VENDOR IMAGE": [
+    "Using {{VENDOR_IMAGE}} to avoid custom build overhead",
+    "Pin by digest for reproducibility",
+    "Update digest monthly or when vendor releases security patches"
+  ],
+  "image": "{{VENDOR_IMAGE}}@sha256:{{DIGEST}}",
+
+  "// SPECIFICATION FILES": "Mount read-only to prevent accidental modification",
+  "mounts": [
+    "source={{SPEC_FILE}},target=/workspace/{{SPEC_FILE}},type=bind,readonly",
+    "source={{CONFIG_FILE}},target=/workspace/{{CONFIG_FILE}},type=bind,readonly"
+  ],
+
+  "// GENERATION COMMAND": "Customize based on your generator tool",
+  "postCreateCommand": "bash -c 'generator-tool --input {{SPEC_FILE}} --config {{CONFIG_FILE}} --languages {{LANGUAGES}} --output {{OUT_DIR}}'",
+
+  "// WORKSPACE SETUP": "Configure VS Code for generated code",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-json-languageservice",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "files.exclude": {
+          "{{OUT_DIR}}/**": false
+        },
+        "files.watcherExclude": {
+          "{{OUT_DIR}}/**": true
+        }
+      }
+    }
+  },
+
+  "// PORT FORWARDING": "Adjust based on your application needs",
+  "forwardPorts": [8080, 3000],
+
+  "// CONTAINER USER": "Use non-root user for security",
+  "remoteUser": "vscode",
+
+  "// LIFECYCLE HOOKS": "Optional additional setup",
+  "postStartCommand": "echo 'Container ready. Generated artifacts in {{OUT_DIR}}'",
+  "postAttachCommand": "ls -la {{OUT_DIR}}"
+}

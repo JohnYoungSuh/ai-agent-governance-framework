@@ -1,0 +1,142 @@
+# ==========================================================
+# AI Agent Governance Framework Guardrail Configuration
+# ==========================================================
+# Namespace: %project_name$
+# Version:   1.0
+# Updated:   2025-10-21
+# ----------------------------------------------------------
+# Purpose:
+#   Enforce AI governance, safety, auditability, and compliance
+#   across all autonomous or semi-autonomous agents operating
+#   within the project namespace.
+# ----------------------------------------------------------
+
+metadata:
+  title: "AI Agent Governance Framework Guardrails"
+  namespace: "%project_name$"
+  version: "1.0"
+  updated: "2025-10-21"
+  maintainer: "Governance Working Group"
+  policy_reference: "../GOVERNANCE-POLICY.md"
+
+scope:
+  rules:
+    - "Agents act strictly within the declared project namespace."
+    - "Agents must not create, modify, or delete external resources without explicit authorization."
+    - "Agents must confirm scope when resource ownership is ambiguous."
+    - "All actions must be traceable and reversible."
+    - "Namespace and agent identity must be declared at startup."
+
+safety:
+  defaults:
+    dry_run: true
+    idempotent: true
+  rules:
+    - "All destructive or irreversible actions require explicit human confirmation."
+    - "Prefer inspection (read-only) actions before modification."
+    - "Show affected resources before execution."
+    - "Avoid opaque or shorthand commands that reduce clarity."
+
+responsibility_separation:
+  build_time:
+    - "Install static dependencies, templates, and fixed directories only."
+  runtime:
+    - "Allow minimal bootstrap logic; prefer native startup functions."
+  orchestration:
+    - "All environment variables, ports, and volumes must be declared in manifests."
+  application:
+    - "Runtime customization implemented via code, not shell wrappers."
+  governance:
+    - "CI/CD pipelines must validate and reject violations of these boundaries."
+
+file_system:
+  base_directory: "~/projects/%project_name$"
+  rules:
+    - "Do not operate outside the project directory unless explicitly requested."
+    - "Confirm before overwriting or deleting existing files."
+    - "Never suggest destructive absolute commands (e.g., rm -rf /)."
+    - "Declare symlink source and target clearly."
+    - "Default to Linux/WSL filesystem for heavy workloads."
+
+memory_state:
+  rules:
+    - "Do not assume persistent memory across sessions."
+    - "Never suggest direct manipulation of system memory."
+    - "Treat only container volumes or defined storage as persistence layers."
+    - "Clarify whether changes are ephemeral (in-container) or persistent (volume/host)."
+
+audit_trace:
+  format: "JSON"
+  rules:
+    - "Log all actions with timestamp, namespace, justification, and outcome."
+    - "Mask sensitive values (tokens, passwords) in all outputs."
+    - "Store logs in centralized, queryable audit store."
+
+secrets_management:
+  approved_stores:
+    - "Vault"
+    - "Azure Key Vault"
+    - "AWS Secrets Manager"
+  rules:
+    - "Never expose secrets in logs or console outputs."
+    - "Retrieve secrets only from approved stores."
+    - "Mask sensitive data in all audit and telemetry records."
+
+policy_versioning:
+  rules:
+    - "Agents must verify current policy version at startup."
+    - "Execution must stop if policy version is outdated."
+
+human_escalation:
+  triggers:
+    - "Ambiguous scope or ownership."
+    - "Potentially destructive operation without confirmation."
+    - "Policy conflict or missing authorization."
+  action: "Escalate to human operator before proceeding."
+
+resource_governance:
+  quotas:
+    cpu: "Respect limits defined in orchestration manifests."
+    memory: "Respect container resource allocations."
+    disk: "Respect volume capacity and clean-up schedules."
+    api_calls: "Throttle or queue requests to stay within defined limits."
+  rules:
+    - "Never exceed resource quotas without explicit override."
+    - "Prefer batching, caching, or asynchronous patterns for optimization."
+
+cross_agent_comm:
+  schema: "JSON-Schema v7"
+  rules:
+    - "All inter-agent messages must be schema-validated."
+    - "Reject malformed or ambiguous inputs."
+    - "Include namespace and justification in all messages."
+
+ci_cd_enforcement:
+  validation:
+    - "Reject builds containing large or complex entrypoint scripts."
+    - "Reject workflows mixing build-time and runtime logic."
+    - "Require explicit environment variable definitions in manifests."
+    - "Enforce idempotency checks for startup logic."
+  gates:
+    - "Lint governance compliance before merge."
+    - "Block deployment if guardrails are violated."
+
+simulation_mode:
+  enabled: true
+  description: "Simulate all actions by default; require explicit confirmation for live execution."
+
+logging:
+  level: "INFO"
+  output: "structured"
+  include:
+    - timestamp
+    - agent_id
+    - namespace
+    - action
+    - justification
+    - result
+
+policy_status:
+  active: true
+  last_review: "2025-10-21"
+  next_review: "2026-04-01"
