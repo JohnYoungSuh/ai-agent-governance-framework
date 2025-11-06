@@ -146,6 +146,68 @@ Priority Levels:
 
 ---
 
+### RI-019: Non-Deterministic Problem Runaway
+
+**NIST Controls**: SA-15-AI-1, CA-7-AI-1, AC-6-AI-2 | **CCI**: CCI-AI-013, CCI-AI-012, CCI-002220
+**Severity**: 🔴 Critical (Cost & Quality Impact)
+**Likelihood**: 4 (High)
+**Impact**: 3 (Moderate)
+**Risk Score**: 12
+
+**Description**: Agent consumes excessive tokens and time on problems with unclear requirements or ambiguous specifications, leading to wasted resources and potentially incorrect implementations.
+
+**Scenarios**:
+- Agent iterates endlessly on unclear requirements without convergence
+- Multiple design approaches explored without clear decision criteria
+- Extended back-and-forth consuming tokens without human clarification
+- Implementation of wrong solution due to misunderstood requirements
+- Developer frustration and time waste from ambiguous interactions
+
+**Applicable Tiers**: All (1-4), especially Tier 2-3 during development
+
+**Related Mitigations**: MI-024 (Non-Deterministic Problem Prevention), MI-009 (Cost Monitoring), MI-007 (Human Review)
+**NIST Mitigations**: SA-15-AI-1 (Cost Controls), CA-7-AI-1 (Interaction Monitoring), AC-6-AI-2 (Human-in-the-Loop)
+
+**Detection Methods**:
+- Time-based interaction monitoring (>5 minutes without convergence)
+- Iteration count tracking (>10 back-and-forth exchanges)
+- Convergence score analysis (low progress indicators)
+- Token consumption rate anomalies
+- Lack of clear success criteria or test cases
+
+**Prevention**:
+```python
+# Implement interaction monitoring
+monitor = LLMInteractionMonitor(timeout_minutes=5)
+
+if monitor.check_interaction_limits()[0]:
+    # Stop LLM interaction
+    # Escalate to human for requirements clarification
+    request_human_review("non_deterministic_problem")
+```
+
+**Indicators of Non-Deterministic Problems**:
+- ❌ Requirements are vague, contradictory, or missing
+- ❌ Multiple equally valid design approaches with unclear tradeoffs
+- ❌ Missing business logic or user intent context
+- ❌ Unclear success criteria or acceptance tests
+- ❌ Iterating on solutions without measurable progress
+- ❌ Questions like "What should this do?" or "Which is better?"
+
+**Resolution Protocol**:
+1. **STOP** LLM interaction after 5 minutes or 10 iterations
+2. **ESCALATE** to human with specific clarification questions
+3. **DOCUMENT** cost saved by early termination
+4. **RESUME** only after requirements are clarified
+
+**Cost Impact**:
+- Typical runaway session: 20-50K tokens ($0.60-$1.50 for GPT-4)
+- Potential incorrect implementation requiring full rework
+- Developer time waste: 30-60 minutes per unclear problem
+- Total cost per incident: $50-$150 (tokens + time)
+
+---
+
 ## 🟡 High Risks (Address for Tier 3+)
 
 ### RI-002: Model Version Drift & Breaking Changes

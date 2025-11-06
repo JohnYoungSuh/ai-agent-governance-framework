@@ -39,6 +39,7 @@ This catalog provides practical, implementation-ready mitigations for AI agent r
 | MI-019 | Audit Trails | RI-007, RI-016 | Low | 4-8h | 🟡 High |
 | MI-020 | Tier Enforcement | RI-012, RI-008 | Low | 2-4h | 🔴 Critical |
 | MI-021 | Budget Limits | RI-018 | Low | 1-2h | 🔴 Critical |
+| MI-024 | Non-Deterministic Prevention | RI-019, RI-018 | Low | 2-4h | 🟡 High |
 
 ---
 
@@ -438,6 +439,311 @@ except Exception as e:
 ```
 
 **Tier Applicability**: All tiers (1-4)
+
+---
+
+### MI-024: Non-Deterministic Problem Prevention
+
+**Addresses**: RI-019 (Non-Deterministic Problem Runaway), RI-018 (Cost Overrun)
+
+**Implementation Cost**: Low
+**Effort**: 2-4 hours
+**Ongoing Cost**: None
+
+**Description**: Automatic detection and prevention of runaway interactions on unclear or ambiguous problems. Stops LLM usage after time/iteration thresholds and escalates to human for requirements clarification.
+
+**Purpose**: Prevent token waste and incorrect implementations when problem requirements are vague, contradictory, or missing clear success criteria.
+
+**Implementation**:
+
+```python
+import time
+from typing import Tuple, Optional
+from datetime import datetime
+
+class LLMInteractionMonitor:
+    """
+    Monitor LLM interactions for non-deterministic problem patterns
+    Control: MI-024 (Non-Deterministic Problem Prevention)
+    """
+
+    def __init__(self,
+                 timeout_minutes: int = 5,
+                 max_iterations: int = 10,
+                 convergence_threshold: float = 0.3):
+        """
+        Initialize interaction monitor
+
+        Args:
+            timeout_minutes: Maximum time before escalation (default: 5 min)
+            max_iterations: Maximum back-and-forth exchanges (default: 10)
+            convergence_threshold: Minimum progress score (0-1, default: 0.3)
+        """
+        self.start_time = time.time()
+        self.timeout_seconds = timeout_minutes * 60
+        self.max_iterations = max_iterations
+        self.convergence_threshold = convergence_threshold
+
+        # Tracking
+        self.iteration_count = 0
+        self.convergence_score = 1.0  # Start optimistic
+        self.problem_indicators = []
+        self.cost_estimate = 0.0
+
+    def check_interaction_limits(self) -> Tuple[bool, Optional[str]]:
+        """
+        Check if interaction should be stopped
+
+        Returns:
+            (should_stop, reason)
+        """
+        elapsed = time.time() - self.start_time
+        self.iteration_count += 1
+
+        # Time-based limit (5 minutes default)
+        if elapsed > self.timeout_seconds:
+            reason = (f"⏰ Time limit exceeded: {elapsed/60:.1f} minutes\n"
+                     f"   Recommendation: Clarify requirements with human")
+            return True, reason
+
+        # Iteration-based limit (excessive back-and-forth)
+        if self.iteration_count > self.max_iterations:
+            reason = (f"🔄 Excessive iterations: {self.iteration_count}\n"
+                     f"   Recommendation: Problem may be non-deterministic")
+            return True, reason
+
+        # Convergence check (are we making progress?)
+        if self.iteration_count >= 5 and self.convergence_score < self.convergence_threshold:
+            reason = (f"📉 Low convergence score: {self.convergence_score:.2f}\n"
+                     f"   Recommendation: Requirements unclear, needs human input")
+            return True, reason
+
+        return False, None
+
+    def detect_problem_indicators(self, message: str) -> bool:
+        """
+        Detect indicators of non-deterministic problems in messages
+
+        Returns:
+            True if problem indicators detected
+        """
+        indicators = [
+            "what should",
+            "which approach",
+            "not sure if",
+            "could be",
+            "or maybe",
+            "unclear",
+            "ambiguous",
+            "multiple ways",
+            "depends on",
+            "need more information"
+        ]
+
+        message_lower = message.lower()
+        for indicator in indicators:
+            if indicator in message_lower:
+                self.problem_indicators.append(indicator)
+                # Reduce convergence score
+                self.convergence_score *= 0.8
+                return True
+
+        # Increase convergence score if making progress
+        if "done" in message_lower or "completed" in message_lower:
+            self.convergence_score = min(1.0, self.convergence_score + 0.2)
+
+        return False
+
+    def estimate_cost_if_continued(self, avg_tokens_per_iteration: int = 2000) -> float:
+        """
+        Estimate cost if interaction continues
+
+        Args:
+            avg_tokens_per_iteration: Average tokens per exchange
+
+        Returns:
+            Estimated cost in USD
+        """
+        # Assume continuing for 10 more iterations
+        remaining_iterations = max(0, self.max_iterations - self.iteration_count)
+        remaining_tokens = remaining_iterations * avg_tokens_per_iteration
+
+        # GPT-4 pricing: $0.03/1K input + $0.06/1K output (assume 50/50)
+        cost_per_1k = (0.03 + 0.06) / 2
+        estimated_cost = (remaining_tokens / 1000.0) * cost_per_1k
+
+        return estimated_cost
+
+    def get_cost_saved(self, current_cost: float) -> float:
+        """Calculate cost saved by stopping now"""
+        potential_cost = current_cost + self.estimate_cost_if_continued()
+        return potential_cost - current_cost
+
+    def generate_escalation_message(self, current_cost: float = 0.0) -> str:
+        """
+        Generate human escalation message
+
+        Args:
+            current_cost: Cost spent so far in USD
+
+        Returns:
+            Formatted escalation message
+        """
+        elapsed_minutes = (time.time() - self.start_time) / 60
+        cost_saved = self.get_cost_saved(current_cost)
+
+        message = f"""
+╔══════════════════════════════════════════════════════════════════╗
+║  ⚠️  NON-DETERMINISTIC PROBLEM DETECTED - HUMAN REVIEW REQUIRED  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Control: MI-024 (Non-Deterministic Problem Prevention)
+Risk: RI-019 (Non-Deterministic Problem Runaway)
+
+INTERACTION STOPPED - Requirements unclear
+
+📊 Session Metrics:
+   • Time elapsed: {elapsed_minutes:.1f} minutes (limit: {self.timeout_seconds/60:.0f} min)
+   • Iterations: {self.iteration_count} (limit: {self.max_iterations})
+   • Convergence score: {self.convergence_score:.2f} (threshold: {self.convergence_threshold})
+   • Cost spent: ${current_cost:.4f}
+   • Est. cost if continued: ${self.estimate_cost_if_continued():.4f}
+   • Cost SAVED by stopping: ${cost_saved:.4f} 💰
+
+🚩 Problem Indicators Detected:
+"""
+        for indicator in self.problem_indicators[-5:]:  # Show last 5
+            message += f"   • '{indicator}'\n"
+
+        message += f"""
+📋 Required Actions:
+
+1. CLARIFY REQUIREMENTS:
+   ❓ What is the specific problem to solve?
+   ❓ What are the acceptance criteria?
+   ❓ What constraints exist?
+   ❓ Which approach is preferred and why?
+
+2. DEFINE SUCCESS CRITERIA:
+   • What does "done" look like?
+   • How will we test/verify the solution?
+   • What are the performance requirements?
+
+3. PROVIDE MISSING CONTEXT:
+   • Business logic or domain knowledge
+   • User intent and use cases
+   • Technical constraints or dependencies
+
+⏸️  LLM interaction PAUSED until requirements clarified.
+
+📝 Recommendation: Schedule 10-minute requirements review with stakeholders
+"""
+        return message
+
+
+# Usage Example
+def ai_assisted_development_session():
+    """Example: Monitoring AI-assisted development"""
+
+    monitor = LLMInteractionMonitor(
+        timeout_minutes=5,
+        max_iterations=10,
+        convergence_threshold=0.3
+    )
+
+    session_cost = 0.0
+
+    while True:
+        # Check if we should stop
+        should_stop, reason = monitor.check_interaction_limits()
+
+        if should_stop:
+            print(monitor.generate_escalation_message(session_cost))
+            return "ESCALATED_TO_HUMAN"
+
+        # Simulate getting user input or LLM response
+        user_message = get_user_input()
+
+        # Detect problem indicators
+        if monitor.detect_problem_indicators(user_message):
+            print("⚠️  Non-deterministic problem indicator detected")
+
+        # Make LLM call
+        response = call_llm(user_message)
+        session_cost += calculate_cost(response)
+
+        # Check response for indicators
+        monitor.detect_problem_indicators(response)
+
+        # Output response
+        print(response)
+
+        # Check if problem is resolved
+        if is_problem_resolved(response):
+            print(f"✅ Problem resolved in {monitor.iteration_count} iterations")
+            print(f"   Total cost: ${session_cost:.4f}")
+            return "SUCCESS"
+
+
+# Integration with claude.md configuration
+def enforce_non_deterministic_prevention():
+    """
+    Enforce MI-024 in claude.md configuration
+
+    This should be called at the start of any AI-assisted session
+    """
+    print("""
+╔══════════════════════════════════════════════════════╗
+║  MI-024: Non-Deterministic Problem Prevention       ║
+╚══════════════════════════════════════════════════════╝
+
+🎯 Session Rules:
+   • Maximum time: 5 minutes per problem
+   • Maximum iterations: 10 exchanges
+   • Convergence threshold: 30%
+
+⏱️  Timer started. Clear requirements lead to faster solutions!
+    """)
+```
+
+**Detection Triggers**:
+
+- ⏰ **Time**: >5 minutes without resolution
+- 🔄 **Iterations**: >10 back-and-forth exchanges
+- 📉 **Convergence**: <30% progress score
+- 🚩 **Keywords**: "unclear", "ambiguous", "which approach", "what should"
+
+**Escalation Actions**:
+
+1. **STOP** LLM interaction immediately
+2. **CALCULATE** cost saved by stopping
+3. **GENERATE** escalation message with:
+   - Session metrics (time, iterations, cost)
+   - Detected problem indicators
+   - Specific clarification questions
+4. **NOTIFY** human with requirements template
+5. **PAUSE** until requirements clarified
+
+**Benefits**:
+
+- 💰 **Cost Savings**: $0.60-$1.50 per prevented runaway (GPT-4)
+- ⏱️ **Time Savings**: 30-60 minutes per unclear problem
+- ✅ **Quality**: Prevents incorrect implementations
+- 🎯 **Focus**: Forces clear problem definition
+
+**Tier Applicability**: All tiers (1-4), especially Tier 2 (Developer)
+
+**Integration Points**:
+- `claude.md` configuration file (development sessions)
+- IDE plugins and AI assistants
+- Code review workflows
+- Interactive debugging sessions
+
+**Cost-Benefit Analysis**:
+- Implementation: 2-4 hours one-time
+- Per-incident savings: $50-$150 (tokens + developer time)
+- Break-even: First prevented incident
+- ROI: 1000%+ in typical development cycles
 
 ---
 

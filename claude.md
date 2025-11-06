@@ -553,6 +553,115 @@ Before suggesting any deployment, ensure:
 4. **Breaking Changes**: API changes, schema modifications
 5. **Compliance**: New controls, risk mitigations, audit requirements
 6. **Uncertainty**: When unsure about framework interpretation
+7. **Non-Deterministic Problems**: Requirements unclear, multiple valid solutions, or ambiguous specifications
+
+### Non-Deterministic Problem Protocol (MI-024)
+
+**Control: MI-024 (Non-Deterministic Problem Prevention)**
+
+If a problem is **non-deterministic** (unclear requirements, ambiguous goals, multiple equally valid approaches), **STOP LLM interaction immediately** and request human clarification.
+
+**Time Limit**: If resolution is not clear within **5 minutes** of interaction, escalate to human.
+
+#### Indicators of Non-Deterministic Problems:
+
+- ❌ Requirements are vague or contradictory
+- ❌ Multiple design approaches with unclear tradeoffs
+- ❌ Missing context about business logic or user intent
+- ❌ Unclear success criteria or acceptance tests
+- ❌ Iterating on solutions without convergence
+- ❌ "What should this do?" or "Which approach is better?" questions
+
+#### Required Actions:
+
+```python
+# Detect non-deterministic interaction pattern
+class LLMInteractionMonitor:
+    def __init__(self, timeout_minutes: int = 5):
+        self.start_time = time.time()
+        self.timeout_seconds = timeout_minutes * 60
+        self.iteration_count = 0
+        self.convergence_score = 0.0
+
+    def check_interaction_limits(self) -> Tuple[bool, str]:
+        """
+        Check if LLM interaction should be halted
+        Control: MI-024 (Non-Deterministic Problem Prevention)
+
+        Returns:
+            (should_stop, reason)
+        """
+        elapsed = time.time() - self.start_time
+        self.iteration_count += 1
+
+        # Time-based limit
+        if elapsed > self.timeout_seconds:
+            return True, f"Time limit exceeded: {elapsed/60:.1f} minutes"
+
+        # Iteration-based limit (excessive back-and-forth)
+        if self.iteration_count > 10:
+            return True, f"Excessive iterations: {self.iteration_count}"
+
+        # Convergence check (are we making progress?)
+        if self.iteration_count > 5 and self.convergence_score < 0.3:
+            return True, "Low convergence - requirements unclear"
+
+        return False, ""
+
+# Usage in interactive sessions
+monitor = LLMInteractionMonitor(timeout_minutes=5)
+
+while True:
+    should_stop, reason = monitor.check_interaction_limits()
+
+    if should_stop:
+        print(f"""
+⚠️  NON-DETERMINISTIC PROBLEM DETECTED
+
+Reason: {reason}
+Control: MI-024 (Non-Deterministic Problem Prevention)
+
+STOPPING LLM INTERACTION - Human review required.
+
+Please clarify:
+1. What is the specific problem to solve?
+2. What are the success criteria?
+3. What are the constraints and requirements?
+4. Which approach is preferred and why?
+
+Cost saved by stopping: ~${estimate_remaining_cost():.2f}
+Tokens saved: ~{estimate_remaining_tokens()}
+        """)
+        break
+
+    # Continue interaction...
+```
+
+#### Escalation Template:
+
+```
+⚠️  ESCALATION: Non-Deterministic Problem
+
+Time spent: 5+ minutes
+Iterations: 10+
+Convergence: Low
+
+Current situation:
+- Problem: [Describe unclear problem]
+- Attempted approaches: [List approaches tried]
+- Blockers: [What's unclear or ambiguous]
+
+Required from human:
+1. Clarify requirements: [Specific questions]
+2. Define success criteria: [What does "done" look like?]
+3. Approve approach: [Which solution direction?]
+4. Provide missing context: [Business logic, user intent, etc.]
+
+Estimated cost if continued: $X.XX (Y tokens)
+Estimated cost if stopped now: $Z.ZZ (W tokens)
+
+Recommendation: STOP and clarify before proceeding.
+```
 
 **Example Request**:
 ```
