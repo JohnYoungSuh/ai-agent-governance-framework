@@ -120,6 +120,37 @@ if command -v aws &> /dev/null; then
             echo "  ❌ KMS key rotation NOT enabled (SEC-001, MI-003)"
             ((FAILED++))
         fi
+
+        # Enhanced: Check KMS key encryption algorithms
+        echo "  🔍 Validating KMS encryption algorithms..."
+        KMS_ALGORITHMS=$(aws kms describe-key --key-id "$KMS_KEY_ID" --region "$AWS_REGION" 2>/dev/null | \
+            jq -r '.KeyMetadata.EncryptionAlgorithms[]' || echo "")
+
+        if [ -n "$KMS_ALGORITHMS" ]; then
+            echo "  ✅ KMS encryption algorithms: $(echo "$KMS_ALGORITHMS" | tr '\n' ', ' | sed 's/,$//')"
+            # Validate that strong algorithms are used (not RSA_OAEP_SHA_1)
+            if echo "$KMS_ALGORITHMS" | grep -q "RSAES_OAEP_SHA_256\|SYMMETRIC_DEFAULT"; then
+                echo "  ✅ Strong encryption algorithms detected (SEC-001)"
+                ((PASSED++))
+            else
+                echo "  ⚠️  Consider using stronger encryption algorithms (RSAES_OAEP_SHA_256 or SYMMETRIC_DEFAULT)"
+            fi
+        else
+            echo "  ⚠️  Could not retrieve KMS encryption algorithms"
+        fi
+
+        # Enhanced: Check KMS key specification
+        KMS_KEY_SPEC=$(aws kms describe-key --key-id "$KMS_KEY_ID" --region "$AWS_REGION" 2>/dev/null | \
+            jq -r '.KeyMetadata.KeySpec' || echo "")
+
+        if [ -n "$KMS_KEY_SPEC" ]; then
+            echo "  ℹ️  KMS key specification: $KMS_KEY_SPEC"
+            # Recommend SYMMETRIC_DEFAULT for most use cases
+            if [ "$KMS_KEY_SPEC" = "SYMMETRIC_DEFAULT" ]; then
+                echo "  ✅ Using recommended symmetric key specification"
+                ((PASSED++))
+            fi
+        fi
     else
         echo "  ⚠️  KMS key not found (may not be deployed yet)"
     fi
@@ -191,6 +222,34 @@ if command -v aws &> /dev/null; then
         else
             echo "  ❌ Wildcard resources found - use least privilege (SEC-001)"
             ((FAILED++))
+        fi
+
+        # Enhanced: Check IAM role trust policy (AssumeRolePolicyDocument)
+        echo "  🔍 Validating IAM role trust policy..."
+        ASSUME_ROLE_POLICY=$(aws iam get-role --role-name "$IAM_ROLE" 2>/dev/null | \
+            jq -r '.Role.AssumeRolePolicyDocument' || echo "")
+
+        if [ -n "$ASSUME_ROLE_POLICY" ]; then
+            echo "  ✅ IAM role trust policy retrieved"
+
+            # Check for overly permissive trust relationships
+            if echo "$ASSUME_ROLE_POLICY" | jq -e '.Statement[] | select(.Principal.AWS == "*")' >/dev/null 2>&1; then
+                echo "  ❌ CRITICAL: IAM role has wildcard (*) in trust policy - SECURITY RISK (SEC-001)"
+                ((FAILED++))
+            elif echo "$ASSUME_ROLE_POLICY" | jq -e '.Statement[] | select(.Condition == null)' >/dev/null 2>&1; then
+                echo "  ⚠️  IAM role trust policy lacks conditions - consider adding ExternalId or SourceArn"
+            else
+                echo "  ✅ IAM role trust policy has appropriate conditions (SEC-001)"
+                ((PASSED++))
+            fi
+
+            # Check service principals
+            SERVICE_PRINCIPALS=$(echo "$ASSUME_ROLE_POLICY" | jq -r '.Statement[].Principal.Service // empty' 2>/dev/null)
+            if [ -n "$SERVICE_PRINCIPALS" ]; then
+                echo "  ℹ️  Trusted service principals: $(echo "$SERVICE_PRINCIPALS" | tr '\n' ', ' | sed 's/,$//')"
+            fi
+        else
+            echo "  ⚠️  Could not retrieve IAM role trust policy"
         fi
     else
         echo "  ⚠️  IAM role not found: $IAM_ROLE"
