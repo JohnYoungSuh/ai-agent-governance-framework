@@ -12,11 +12,11 @@ You are assisting with development on the **AI Agent Governance Framework v2.1**
 
 ### Key Principles
 
-1. **Human Primacy (APP-001)**: All significant changes require human review and approval
-2. **Security First (SEC-001)**: Never compromise security for convenience
-3. **Audit Everything (AU-002, G-07)**: All operations must be auditable
-4. **Least Privilege (AC-003)**: Grant minimum necessary permissions
-5. **Cost Awareness (MI-009, MI-021)**: Track and enforce budget limits
+1. **Human Primacy (AC-6-AI-2)**: All significant changes require human review and approval
+2. **Security First (IA-5, IA-5(7), SC-28)**: Never compromise security for convenience
+3. **Audit Everything (AU-2, AU-3, AU-3-AI-1)**: All operations must be auditable
+4. **Least Privilege (AC-6, AC-6(1))**: Grant minimum necessary permissions
+5. **Cost Awareness (SA-15-AI-1, CA-7-AI-1)**: Track and enforce budget limits
 
 ---
 
@@ -50,9 +50,9 @@ When assisting with this codebase, Claude operates at **Tier 2 (Developer)**:
 
 ## Code Generation Guidelines
 
-### Security Controls (SEC-001, MI-003)
+### Security Controls (IA-5, IA-5(7), SC-28)
 
-When generating code:
+When generating code for credential management and encryption:
 
 ```python
 # ✅ GOOD: Use environment variables for secrets
@@ -79,9 +79,9 @@ def process_user_input(user_input: str) -> str:
     return eval(user_input)  # Command injection risk!
 ```
 
-### Audit Trail Integration (AU-002, G-07)
+### Audit Trail Integration (AU-2, AU-3, AU-3-AI-1)
 
-Always include audit trail generation:
+Always include audit trail generation with AI-specific decision logging:
 
 ```python
 # ✅ GOOD: Generate audit trail
@@ -94,7 +94,7 @@ def deploy_model(agent_id: str, model_config: Dict) -> str:
         "actor": get_current_user(),
         "action": "deploy_model",
         "inputs": {"agent_id": agent_id, "model": model_config},
-        "control_ids": ["MI-002", "MI-014"],
+        "control_ids": ["SI-10", "RA-9-AI-2", "SC-4-AI-2"],
         "compliance_result": "pass"
     }
 
@@ -111,9 +111,9 @@ def deploy_model(agent_id: str, model_config: Dict) -> str:
     return audit_id
 ```
 
-### Cost Tracking (MI-009, MI-021)
+### Cost Tracking (SA-15-AI-1, CA-7-AI-1)
 
-Include cost tracking for all LLM operations:
+Include cost tracking and budget enforcement for all LLM operations:
 
 ```python
 # ✅ GOOD: Track costs with OpenTelemetry
@@ -162,15 +162,15 @@ def validate_agent_config(config: Dict) -> Tuple[bool, List[str]]:
         if field not in config:
             errors.append(f"Missing required field: {field}")
 
-    # Validate tier
+    # Validate tier (AC-6-AI-1: Tier Enforcement)
     if config.get("tier") not in [1, 2, 3, 4]:
         errors.append("Invalid tier: must be 1-4")
 
-    # Validate budget
+    # Validate budget (SA-15-AI-1: Cost Controls)
     if config.get("budget_limit", 0) <= 0:
         errors.append("Budget limit must be positive")
 
-    # Check Jira CR for Tier 3+
+    # Check Jira CR for Tier 3+ (AC-6-AI-2: Human Approval)
     if config.get("tier", 1) >= 3 and not config.get("jira_cr_id"):
         errors.append("Tier 3+ requires Jira CR approval")
 
@@ -243,7 +243,7 @@ def rotate_api_key(agent_id: str) -> str:
     """
     Rotate API key for agent with audit trail
 
-    Controls: SEC-001 (Secrets Management), MI-003 (Credential Rotation)
+    Controls: IA-5 (Authenticator Management), IA-5(7) (No Embedded Credentials)
 
     Args:
         agent_id: Agent identifier
@@ -255,7 +255,7 @@ def rotate_api_key(agent_id: str) -> str:
         PermissionError: If caller lacks rotation permission
         ValueError: If agent not found
 
-    Audit: Generates audit trail entry with old/new key IDs
+    Audit: Generates audit trail entry with old/new key IDs (AU-3-AI-1)
     """
     # Implementation...
 ```
@@ -267,13 +267,14 @@ def rotate_api_key(agent_id: str) -> str:
 module "kms_secrets" {
   source = "./modules/kms"
 
-  # Control: SEC-001 (Encryption at Rest)
-  # Control: MI-003 (Secrets Management)
+  # Control: SC-28 (Protection of Information at Rest)
+  # Control: IA-5 (Authenticator Management)
+  # Control: IA-5(7) (No Embedded Credentials)
   key_alias               = "ai-agent-secrets-prod"
-  enable_key_rotation     = true  # Required by SEC-001
+  enable_key_rotation     = true  # Required by SC-28
 
   # Audit correlation
-  control_ids = ["SEC-001", "MI-003"]
+  control_ids = ["SC-28", "IA-5", "IA-5(7)"]
   jira_cr_id  = var.jira_cr_id
   audit_id    = var.audit_id
 
@@ -338,28 +339,26 @@ def update_jira_deployment_status(cr_id: str, status: str, details: Dict):
 ### Task 1: Add New Governance Control
 
 ```python
-# 1. Define control in policies/controls.json
-{
-  "control_id": "MI-022",
-  "name": "Model Version Tracking",
-  "description": "Track and audit all model version changes",
-  "tier_applicability": [2, 3, 4],
-  "validation_script": "scripts/validate-model-version.sh"
-}
+# 1. Define control in policies/control-mappings.md
+# CM-3-AI-1: Model Version Control
+# Track and audit all model version changes
+# Tier applicability: [2, 3, 4]
+# Validation script: scripts/validate-model-version.sh
 
 # 2. Implement validation
 def validate_model_version(agent_id: str, model_version: str) -> bool:
     """
     Validate model version change
-    Control: MI-022 (Model Version Tracking)
+    Control: CM-3-AI-1 (Model Version Control)
+    CCI: CCI-AI-007
     """
     # Check version format
     if not re.match(r'^v\d+\.\d+\.\d+$', model_version):
         return False
 
-    # Log version change
+    # Log version change (AU-3-AI-1: AI Decision Auditability)
     audit_entry = {
-        "control_id": "MI-022",
+        "control_ids": ["CM-3-AI-1", "AU-3-AI-1"],
         "agent_id": agent_id,
         "old_version": get_current_version(agent_id),
         "new_version": model_version
@@ -377,10 +376,11 @@ def test_validate_model_version():
 ### Task 2: Add New Risk Mitigation
 
 ```markdown
-# Add to risks/risk-catalog.md
+# Add to policies/risk-catalog.md
 
-## RI-019: Model Drift
+## Model Drift and Performance Degradation
 
+**NIST Controls**: CA-7-AI-1 (Model Performance Monitoring)
 **Category**: Runtime Integrity
 **OWASP Mapping**: LLM02 (Model Drift)
 **Severity**: High
@@ -388,7 +388,10 @@ def test_validate_model_version():
 ### Description
 Model performance degrades over time as data distributions change.
 
-### Mitigation Strategy (MI-023)
+### Mitigation Strategy
+**Primary Control**: CA-7-AI-1 (Continuous Model Performance Monitoring)
+**Supporting Controls**: CM-3-AI-1 (Model Version Control), AU-3-AI-1 (AI Decision Auditability)
+
 - Monitor model accuracy metrics in production
 - Set drift detection thresholds
 - Automate retraining triggers
@@ -399,7 +402,8 @@ Model performance degrades over time as data distributions change.
 def detect_model_drift(agent_id: str, metrics: Dict) -> bool:
     """
     Detect model drift
-    Control: MI-023 (Model Drift Detection)
+    Control: CA-7-AI-1 (Model Performance Monitoring)
+    CCI: CCI-AI-012
     """
     baseline = get_baseline_metrics(agent_id)
 
@@ -418,24 +422,25 @@ def detect_model_drift(agent_id: str, metrics: Dict) -> bool:
 ```hcl
 # terraform/modules/model_registry/main.tf
 
-# Control: MI-014 (RAG Security), MI-022 (Model Version Tracking)
+# Control: SC-4-AI-2 (Vector Store Data Isolation), CM-3-AI-1 (Model Version Control)
+# Control: SC-28 (Protection of Information at Rest)
 resource "aws_ecr_repository" "model_registry" {
   name                 = "ai-agent-models-${var.environment}"
-  image_tag_mutability = "IMMUTABLE"  # SEC-001: Prevent tag overwrites
+  image_tag_mutability = "IMMUTABLE"  # CM-3-AI-1: Prevent tag overwrites
 
   image_scanning_configuration {
-    scan_on_push = true  # SEC-001: Security scanning
+    scan_on_push = true  # SI-3: Malware Protection
   }
 
   encryption_configuration {
     encryption_type = "KMS"
-    kms_key         = var.kms_key_arn  # MI-003: Encryption
+    kms_key         = var.kms_key_arn  # SC-28: Encryption at Rest
   }
 
   tags = merge(
     var.tags,
     {
-      ControlIDs = "MI-014,MI-022,SEC-001,MI-003"
+      ControlIDs = "SC-4-AI-2,CM-3-AI-1,SC-28,SI-3"
       JiraCR     = var.jira_cr_id
       AuditID    = var.audit_id
     }
@@ -555,9 +560,10 @@ Before suggesting any deployment, ensure:
 6. **Uncertainty**: When unsure about framework interpretation
 7. **Non-Deterministic Problems**: Requirements unclear, multiple valid solutions, or ambiguous specifications
 
-### Non-Deterministic Problem Protocol (MI-024)
+### Non-Deterministic Problem Protocol (CA-7-AI-2)
 
-**Control: MI-024 (Non-Deterministic Problem Prevention)**
+**Control: CA-7-AI-2 (Interaction Monitoring for Non-Deterministic Problems)**
+**CCI: CCI-AI-017**
 
 If a problem is **non-deterministic** (unclear requirements, ambiguous goals, multiple equally valid approaches), **STOP LLM interaction immediately** and request human clarification.
 
@@ -586,7 +592,8 @@ class LLMInteractionMonitor:
     def check_interaction_limits(self) -> Tuple[bool, str]:
         """
         Check if LLM interaction should be halted
-        Control: MI-024 (Non-Deterministic Problem Prevention)
+        Control: CA-7-AI-2 (Interaction Monitoring)
+        CCI: CCI-AI-017
 
         Returns:
             (should_stop, reason)
@@ -619,7 +626,8 @@ while True:
 ⚠️  NON-DETERMINISTIC PROBLEM DETECTED
 
 Reason: {reason}
-Control: MI-024 (Non-Deterministic Problem Prevention)
+Control: CA-7-AI-2 (Interaction Monitoring)
+CCI: CCI-AI-017
 
 STOPPING LLM INTERACTION - Human review required.
 
@@ -670,7 +678,7 @@ Recommendation: STOP and clarify before proceeding.
 This change requires Tier 3 approval:
 - Modifying production KMS key policy
 - Estimated impact: High
-- Controls affected: SEC-001, MI-003
+- Controls affected: SC-28, IA-5, IA-5(7)
 - Required approvers: Security Lead, Tech Lead
 
 Please:

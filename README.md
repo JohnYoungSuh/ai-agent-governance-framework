@@ -193,9 +193,9 @@ cat docs/QUICK-REFERENCE.md
 ./scripts/setup-agent.sh --tier 1 --name "doc-analyzer"
 
 # Implement critical mitigations
-# - Data leakage prevention (MI-001)
-# - Cost monitoring (MI-009)
-# - Budget limits (MI-021)
+# - Data leakage prevention (SC-4-AI-1)
+# - Cost monitoring (CA-7-AI-1, SA-15-AI-1)
+# - Budget limits (SA-15-AI-1)
 
 # Review the generated configuration
 cat agents/doc-analyzer/config.yml
@@ -258,7 +258,7 @@ cat test-output/siem-events/test-01-compliance-check.json
 # Emit SIEM event
 python3 scripts/otel-siem-emitter.py \
   --agent-id security-agent \
-  --control-id SEC-001 \
+  --control-id IA-5 \
   --event-type compliance_check \
   --severity info \
   --description "KMS key rotation enabled" \
@@ -294,7 +294,7 @@ python3 scripts/game_theory/cooperative_improvement_validator.py \
 - **12 automated checks**: KMS, IAM, Secrets Manager, CloudTrail, S3
 - **Audit trail generation** conforming to JSON schema
 - **SIEM event emission** for every compliance check
-- **Control coverage**: SEC-001, SC-028, AU-002, MI-003, IA-002
+- **Control coverage**: IA-5, IA-5(7), SC-28, AU-2, AU-3
 
 ```bash
 # Run compliance checks with SIEM integration

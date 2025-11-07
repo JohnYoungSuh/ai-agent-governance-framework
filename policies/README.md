@@ -220,20 +220,42 @@ jsonschema -i logs/agent-action.json policies/schemas/audit-trail.json
 
 ## Migration from Legacy IDs
 
-If you're using the old custom IDs (`SEC-001`, `COMP-001`, etc.), refer to the mapping table:
+**IMPORTANT**: This framework now uses NIST 800-53 Rev 5 control IDs as the primary naming convention. Legacy custom IDs (SEC-001, COMP-001, MI-001, etc.) have been deprecated.
 
-| Legacy ID | NIST Control | Document |
-|-----------|--------------|----------|
-| SEC-001 | IA-5, IA-5(7) | `security-policies.md` |
-| SEC-002 | SC-4, SC-28 | `security-policies.md` |
-| SEC-003 | AC-6, AC-6(1) | `security-policies.md` |
-| COMP-001 | AU-2, AU-3, AU-3-AI-1 | `compliance-policies.md` |
-| COMP-002 | CM-3, CM-4 | `compliance-policies.md` |
-| COMP-003 | PL-8 | `compliance-policies.md` |
-| MI-001 through MI-021 | See `control-mappings.md` | `mitigation-catalog.md` |
-| RI-001 through RI-018 | See risk-to-control table | `risk-catalog.md` |
+**For complete migration guidance**, see:
+- **[CONTROL-REMAPPING.md](../docs/CONTROL-REMAPPING.md)** - Complete legacy ID → NIST 800-53 Rev 5 mapping with CCI references
+- **[control-id-mapper.py](../scripts/control-id-mapper.py)** - Automated tool to convert legacy IDs in your files
 
-**Complete mapping available in**: `control-mappings.md` → Risk-to-Control Mapping
+### Quick Reference: Common Legacy ID Mappings
+
+| Legacy ID | NIST 800-53 Rev 5 Control | CCI | Document |
+|-----------|---------------------------|-----|----------|
+| SEC-001 | **IA-5, IA-5(7)** | CCI-000195, CCI-004062 | `security-policies.md` |
+| SEC-002 | **SC-4, SC-28** | CCI-001414, CCI-001199 | `security-policies.md` |
+| SEC-003 | **AC-6, AC-6(1)** | CCI-002220, CCI-002233 | `security-policies.md` |
+| COMP-001 | **AU-2, AU-3, AU-3-AI-1** | CCI-000130, CCI-AI-008 | `compliance-policies.md` |
+| COMP-002 | **CM-3, CM-4** | CCI-000066, CCI-001812 | `compliance-policies.md` |
+| COMP-003 | **PL-8** | CCI-000352 | `compliance-policies.md` |
+| APP-001 | **AC-6-AI-2** | CCI-AI-006 | `compliance-policies.md` |
+| MI-024 | **CA-7-AI-2** | CCI-AI-017 | `mitigation-catalog.md` |
+
+**For all mitigations and risks**: See `control-mappings.md` → Risk-to-Control Mapping and Mitigation-to-Control Mapping
+
+### Using the Migration Tool
+
+```bash
+# Convert a single legacy ID to NIST format
+python3 scripts/control-id-mapper.py convert --id SEC-001
+# Output: IA-5, CCI-000195, Authenticator Management
+
+# Convert all legacy IDs in a file
+python3 scripts/control-id-mapper.py convert-file \
+  --input terraform/main.tf \
+  --output terraform/main-migrated.tf
+
+# Validate a file for remaining legacy IDs
+python3 scripts/control-id-mapper.py validate --file docs/deployment-guide.md
+```
 
 ---
 

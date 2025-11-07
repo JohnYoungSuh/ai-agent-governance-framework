@@ -4,14 +4,16 @@ This Terraform configuration deploys a **Tier 3 Operations AI agent** with compr
 
 ## Overview
 
-This infrastructure implements the **AI Agent Governance Framework v2.0** with:
+This infrastructure implements the **AI Agent Governance Framework v2.1** with **NIST 800-53 Rev 5** controls:
 
-- **18 Risk Controls** (RI-001 to RI-018) addressed
-- **21 Mitigation Controls** (MI-001 to MI-021) implemented
-- **4-Tier Agent Classification** system enforced
-- **Compliance mapping** for GDPR, SOX, EU AI Act
-- **Complete audit trail** with 7-year retention
+- **18 AI-Specific Risks** addressed with NIST control mappings
+- **NIST 800-53 Rev 5 Controls** implemented (AC, AU, CM, IA, SC, SA, CA families)
+- **4-Tier Agent Classification** system enforced (AC-6-AI-1)
+- **Compliance mapping** for FedRAMP, GDPR, SOX, EU AI Act, HIPAA
+- **Complete audit trail** with 7-year retention (AU-2, AU-3, AU-3-AI-1, AU-11)
 - **GitHub Actions integration** for CI/CD
+
+**See `docs/CONTROL-REMAPPING.md`** for legacy control ID → NIST 800-53 Rev 5 mapping.
 
 ---
 
@@ -30,28 +32,28 @@ This infrastructure implements the **AI Agent Governance Framework v2.0** with:
 │                                                              │
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │  IAM Role   │  │   Secrets    │  │  CloudWatch  │      │
-│  │  (MI-020)   │  │  Manager     │  │  Logs/Metrics│      │
-│  │  Tier-based │  │  (MI-003)    │  │  (MI-004)    │      │
+│  │  AC-6-AI-1  │  │  Manager     │  │  Logs/Metrics│      │
+│  │  Tier-based │  │  IA-5, SC-28 │  │  AU-2, AU-3  │      │
 │  └─────────────┘  └──────────────┘  └──────────────┘      │
 │                                                              │
 │  ┌──────────────────────────────────────────────────┐      │
-│  │         DynamoDB Audit Trail (MI-019)            │      │
+│  │    DynamoDB Audit Trail (AU-3-AI-1, AU-11)       │      │
 │  │  ├─ audit_id, timestamp, actor, action           │      │
-│  │  ├─ compliance_result, policy_controls_checked   │      │
+│  │  ├─ compliance_result, control_ids_checked       │      │
 │  │  └─ Stream → Lambda → S3 Archive (7 years)      │      │
 │  └──────────────────────────────────────────────────┘      │
 │                                                              │
 │  ┌──────────────────────────────────────────────────┐      │
-│  │    Cost Monitoring & Alerting (MI-009, MI-021)   │      │
+│  │  Cost Monitoring & Alerting (SA-15-AI-1, CA-7)   │      │
 │  │  ├─ Daily budget alerts (50%, 75%, 90%)          │      │
 │  │  ├─ Circuit breaker at 90% budget                │      │
 │  │  └─ SNS notifications                             │      │
 │  └──────────────────────────────────────────────────┘      │
 │                                                              │
 │  ┌──────────────────────────────────────────────────┐      │
-│  │      Governance Records (MI-018)                  │      │
+│  │   Compliance Evidence Storage (AU-9, CM-3)       │      │
 │  │  ├─ Control implementations                       │      │
-│  │  ├─ Compliance mappings                           │      │
+│  │  ├─ NIST 800-53 Rev 5 mappings                   │      │
 │  │  └─ Evidence storage (S3)                         │      │
 │  └──────────────────────────────────────────────────┘      │
 └─────────────────────────────────────────────────────────────┘

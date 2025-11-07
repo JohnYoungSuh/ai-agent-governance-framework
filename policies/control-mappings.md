@@ -122,37 +122,43 @@ All FedRAMP Moderate controls apply, with additional AI extensions:
 
 ## Risk-to-Control Mapping
 
-| Risk ID | Risk Name | Primary Controls | Supporting Controls |
-|---------|-----------|------------------|---------------------|
-| RI-001 | Hallucination & False Information | SI-7-AI-1, SI-7-AI-2 | AU-3-AI-1, AC-6-AI-2 |
-| RI-002 | Model Version Drift | CM-3-AI-1, CA-7-AI-1 | CM-3, CM-4 |
-| RI-006 | Bias & Discrimination | RA-5-AI-1, SI-7-AI-2 | AC-6-AI-2, AU-3-AI-1 |
-| RI-014 | Prompt Injection | RA-9-AI-2, SI-10 | SI-3, AC-6 |
-| RI-015 | Data Leakage to LLM | SC-4-AI-1, IA-5(7) | AU-3, SC-28 |
-| RI-016 | Regulatory Violations | All applicable controls | AU-11, AU-9 |
-| RI-018 | Cost Overruns | SA-15-AI-1 | CA-7-AI-1, AU-2 |
+Maps risks from the risk catalog to NIST 800-53 Rev 5 controls. For complete risk descriptions, see `policies/risk-catalog.md`.
+
+| Risk Name | Primary Controls | Supporting Controls | Severity |
+|-----------|------------------|---------------------|----------|
+| Hallucination & False Information | SI-7-AI-1, SI-7-AI-2 | AU-3-AI-1, AC-6-AI-2 | High |
+| Model Version Drift | CM-3-AI-1, CA-7-AI-1 | CM-3, CM-4 | Medium |
+| Bias & Discrimination | RA-5-AI-1, SI-7-AI-2 | AC-6-AI-2, AU-3-AI-1 | High |
+| Prompt Injection | RA-9-AI-2, SI-10 | SI-3, AC-6 | Critical |
+| Data Leakage to LLM Providers | SC-4-AI-1, IA-5(7) | AU-3, SC-28 | Critical |
+| Regulatory Violations | All applicable controls | AU-11, AU-9 | High |
+| Cost Overruns | SA-15-AI-1 | CA-7-AI-1, AU-2 | Medium |
+| Non-Deterministic Problem Runaway | CA-7-AI-2 | AC-6-AI-2, AU-3-AI-1 | Medium |
 
 ---
 
 ## Mitigation-to-Control Mapping
 
-| Mitigation ID | Mitigation Name | Primary Controls | CCI References |
-|---------------|-----------------|------------------|----------------|
-| MI-001 | Data Leakage Prevention | SC-4-AI-1, IA-5(7) | CCI-AI-003, CCI-004062 |
-| MI-002 | Input Filtering | SI-10, RA-9-AI-2 | CCI-002754, CCI-AI-002 |
-| MI-003 | Secrets Management | IA-5, IA-5(7) | CCI-000195, CCI-004062 |
-| MI-004 | Observability | AU-2, AU-3, CA-7 | CCI-000130, CCI-000131 |
-| MI-006 | Access Controls | AC-6, AC-6-AI-1 | CCI-002220, CCI-AI-005 |
-| MI-007 | Human Review | AC-6-AI-2 | CCI-AI-006 |
-| MI-009 | Cost Monitoring | SA-15-AI-1, CA-7-AI-1 | CCI-AI-013, CCI-AI-012 |
-| MI-010 | Version Pinning | CM-3-AI-1, CM-7 | CCI-AI-007, CCI-000381 |
-| MI-012 | Bias Testing | RA-5-AI-1 | CCI-AI-011 |
-| MI-013 | Citations | SI-7-AI-1 | CCI-AI-009 |
-| MI-015 | LLM-as-Judge | SI-7-AI-2 | CCI-AI-010 |
-| MI-018 | Compliance Mapping | See overlay tables above | Multiple |
-| MI-019 | Audit Trails | AU-2, AU-3, AU-3-AI-1 | CCI-000130, CCI-AI-008 |
-| MI-020 | Tier Enforcement | AC-6-AI-1 | CCI-AI-005 |
-| MI-021 | Budget Limits | SA-15-AI-1 | CCI-AI-013 |
+Maps mitigations from the mitigation catalog to NIST 800-53 Rev 5 controls. For complete implementation guidance, see `policies/mitigation-catalog.md`.
+
+| Mitigation Name | Primary Controls | CCI References | Implementation Priority |
+|-----------------|------------------|----------------|------------------------|
+| Data Leakage Prevention | SC-4-AI-1, IA-5(7) | CCI-AI-003, CCI-004062 | Critical |
+| Input Filtering | SI-10, RA-9-AI-2 | CCI-002754, CCI-AI-002 | High |
+| Secrets Management | IA-5, IA-5(7) | CCI-000195, CCI-004062 | Critical |
+| Observability | AU-2, AU-3, CA-7 | CCI-000130, CCI-000131 | Critical |
+| Access Controls | AC-6, AC-6-AI-1 | CCI-002220, CCI-AI-005 | Critical |
+| Human Review | AC-6-AI-2 | CCI-AI-006 | High |
+| Cost Monitoring | SA-15-AI-1, CA-7-AI-1 | CCI-AI-013, CCI-AI-012 | High |
+| Version Pinning | CM-3-AI-1, CM-7 | CCI-AI-007, CCI-000381 | Medium |
+| Bias Testing | RA-5-AI-1 | CCI-AI-011 | High |
+| Citations & Fact-Checking | SI-7-AI-1 | CCI-AI-009 | High |
+| LLM-as-Judge Verification | SI-7-AI-2 | CCI-AI-010 | Medium |
+| Compliance Mapping | See overlay tables above | Multiple | Critical |
+| Audit Trails | AU-2, AU-3, AU-3-AI-1 | CCI-000130, CCI-AI-008 | Critical |
+| Tier Enforcement | AC-6-AI-1 | CCI-AI-005 | Critical |
+| Budget Limits | SA-15-AI-1 | CCI-AI-013 | Critical |
+| Non-Deterministic Detection | CA-7-AI-2 | CCI-AI-017 | Medium |
 
 ---
 
