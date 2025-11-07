@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AI Agent Governance Framework OVAL Definitions
+  Version: 2.1
+  Date: 2025-11-06
+
+  OVAL (Open Vulnerability and Assessment Language) definitions for automated
+  compliance checking of AI agent configurations.
+
+  Usage with OpenSCAP:
+    oscap xccdf eval --profile fedramp-moderate-ai \
+        --results results.xml \
+        --oval-results \
+        ai-agent-benchmark.xml
+-->
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5"
+                  xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd
+                                      http://oval.mitre.org/XMLSchema/oval-definitions-5#independent independent-definitions-schema.xsd
+                                      http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
+
+  <generator>
+    <oval:product_name>AI Agent Governance Framework</oval:product_name>
+    <oval:product_version>2.1</oval:product_version>
+    <oval:schema_version>5.11</oval:schema_version>
+    <oval:timestamp>2025-11-06T00:00:00</oval:timestamp>
+  </generator>
+
+  <!-- ================================================================= -->
+  <!-- DEFINITIONS                                                       -->
+  <!-- ================================================================= -->
+
+  <definitions>
+    <!-- Definition: AC-6-AI-1 - Tier Enforcement -->
+    <definition id="oval:gov.nist.ai:def:1001" version="1" class="compliance">
+      <metadata>
+        <title>AI Agent Tier Enforcement</title>
+        <affected family="unix">
+          <platform>AI Agent Runtime</platform>
+        </affected>
+        <reference source="STIG" ref_id="V-AI-001" ref_url="https://ai-agent-governance-framework"/>
+        <reference source="NIST" ref_id="AC-6-AI-1"/>
+        <reference source="CCI" ref_id="CCI-AI-005"/>
+        <description>
+          Verify AI agent is assigned to appropriate tier (1-4) with privilege enforcement enabled.
+          Checks agent_config.yaml for tier field and validates governance controls.
+        </description>
+      </metadata>
+
+      <criteria operator="AND">
+        <criterion comment="Agent configuration file exists" test_ref="oval:gov.nist.ai:tst:1001"/>
+        <criterion comment="Agent tier is defined and valid (1-4)" test_ref="oval:gov.nist.ai:tst:1002"/>
+        <criterion comment="Tier enforcement script exists" test_ref="oval:gov.nist.ai:tst:1003"/>
+      </criteria>
+    </definition>
+
+    <!-- Definition: AC-6-AI-2 - Human Approval -->
+    <definition id="oval:gov.nist.ai:def:1002" version="1" class="compliance">
+      <metadata>
+        <title>Human-in-the-Loop Authorization</title>
+        <affected family="unix">
+          <platform>AI Agent Runtime</platform>
+        </affected>
+        <reference source="STIG" ref_id="V-AI-002"/>
+        <reference source="NIST" ref_id="AC-6-AI-2"/>
+        <reference source="CCI" ref_id="CCI-AI-006"/>
+        <description>
+          Verify Jira CR approval requirement for Tier 3+ agents.
+          Checks for Jira integration configuration and PKI signing capability.
+        </description>
+      </metadata>
+
+      <criteria operator="AND">
+        <criterion comment="Jira integration configured" test_ref="oval:gov.nist.ai:tst:2001"/>
+        <criterion comment="PKI signing tools available" test_ref="oval:gov.nist.ai:tst:2002"/>
+        <criterion comment="Agent tier requires approval (Tier 3+)" test_ref="oval:gov.nist.ai:tst:2003"/>
+      </criteria>
+    </definition>
+
+    <!-- Definition: AU-3-AI-1 - Audit Trail -->
+    <definition id="oval:gov.nist.ai:def:1007" version="1" class="compliance">
+      <metadata>
+        <title>AI Decision Audit Trail</title>
+        <affected family="unix">
+          <platform>AI Agent Runtime</platform>
+        </affected>
+        <reference source="STIG" ref_id="V-AI-007"/>
+        <reference source="NIST" ref_id="AU-3-AI-1"/>
+        <reference source="CCI" ref_id="CCI-AI-008"/>
+        <description>
+          Verify audit trail configuration with proper schema and retention.
+        </description>
+      </metadata>
+
+      <criteria operator="AND">
+        <criterion comment="Audit trail schema exists" test_ref="oval:gov.nist.ai:tst:7001"/>
+        <criterion comment="Audit trail directory configured" test_ref="oval:gov.nist.ai:tst:7002"/>
+      </criteria>
+    </definition>
+
+    <!-- Definition: SA-15-AI-1 - Budget Controls -->
+    <definition id="oval:gov.nist.ai:def:1013" version="1" class="compliance">
+      <metadata>
+        <title>Cost and Budget Controls</title>
+        <affected family="unix">
+          <platform>AI Agent Runtime</platform>
+        </affected>
+        <reference source="STIG" ref_id="V-AI-013"/>
+        <reference source="NIST" ref_id="SA-15-AI-1"/>
+        <reference source="CCI" ref_id="CCI-AI-013"/>
+        <description>
+          Verify budget limits are configured and cost tracking is enabled.
+        </description>
+      </metadata>
+
+      <criteria operator="AND">
+        <criterion comment="Budget limit configured" test_ref="oval:gov.nist.ai:tst:13001"/>
+        <criterion comment="Cost tracking enabled" test_ref="oval:gov.nist.ai:tst:13002"/>
+      </criteria>
+    </definition>
+
+    <!-- Definition: CA-7-AI-2 - Interaction Monitoring -->
+    <definition id="oval:gov.nist.ai:def:1017" version="1" class="compliance">
+      <metadata>
+        <title>Non-Deterministic Problem Detection</title>
+        <affected family="unix">
+          <platform>AI Agent Runtime</platform>
+        </affected>
+        <reference source="STIG" ref_id="V-AI-017"/>
+        <reference source="NIST" ref_id="CA-7-AI-2"/>
+        <reference source="CCI" ref_id="CCI-AI-017"/>
+        <description>
+          Verify interaction monitoring is configured (MI-024).
+        </description>
+      </metadata>
+
+      <criteria operator="AND">
+        <criterion comment="Interaction monitor module exists" test_ref="oval:gov.nist.ai:tst:17001"/>
+        <criterion comment="Timeout configured (5 minutes)" test_ref="oval:gov.nist.ai:tst:17002"/>
+      </criteria>
+    </definition>
+
+  </definitions>
+
+  <!-- ================================================================= -->
+  <!-- TESTS                                                             -->
+  <!-- ================================================================= -->
+
+  <tests>
+    <!-- Test 1001: Agent config file exists -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:1001"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Agent configuration file exists"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:1001"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 1002: Agent tier is valid -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:1002"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Agent tier is valid (1-4)"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:1002"/>
+      <ind-def:state state_ref="oval:gov.nist.ai:ste:1002"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 1003: Governance check script exists -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:1003"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Governance check script exists"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:1003"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 2001: Jira integration configured -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:2001"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Jira integration configured"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:2001"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 2002: PKI signing tools available -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:2002"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="PKI signing script exists"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:2002"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 2003: Agent tier requires approval -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:2003"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Agent tier is 3 or higher"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:1002"/>
+      <ind-def:state state_ref="oval:gov.nist.ai:ste:2003"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 7001: Audit schema exists -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:7001"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Audit trail schema exists"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:7001"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 7002: Audit directory configured -->
+    <ind-def:variable_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                            id="oval:gov.nist.ai:tst:7002"
+                            check_existence="at_least_one_exists"
+                            check="all"
+                            comment="Audit trail directory configured"
+                            version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:7002"/>
+    </ind-def:variable_test>
+
+    <!-- Test 13001: Budget limit configured -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:13001"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Budget limit configured"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:13001"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 13002: Cost tracking script exists -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:13002"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Cost tracking script exists"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:13002"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 17001: Interaction monitor exists -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:17001"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Interaction monitor configured"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:17001"/>
+    </ind-def:textfilecontent54_test>
+
+    <!-- Test 17002: Timeout configured -->
+    <ind-def:textfilecontent54_test xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                     id="oval:gov.nist.ai:tst:17002"
+                                     check_existence="at_least_one_exists"
+                                     check="all"
+                                     comment="Timeout configured (5 minutes)"
+                                     version="1">
+      <ind-def:object object_ref="oval:gov.nist.ai:obj:17002"/>
+      <ind-def:state state_ref="oval:gov.nist.ai:ste:17002"/>
+    </ind-def:textfilecontent54_test>
+
+  </tests>
+
+  <!-- ================================================================= -->
+  <!-- OBJECTS                                                           -->
+  <!-- ================================================================= -->
+
+  <objects>
+    <!-- Object 1001: Agent config file -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:1001"
+                                       version="1">
+      <ind-def:filepath>/etc/ai-agent/agent_config.yaml</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">agent_id:\s*.*</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 1002: Agent tier -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:1002"
+                                       version="1">
+      <ind-def:filepath>/etc/ai-agent/agent_config.yaml</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">tier:\s*([1-4])</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 1003: Governance check script -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:1003"
+                                       version="1">
+      <ind-def:filepath>/opt/ai-agent-governance/scripts/governance-check.sh</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">#!/bin/bash</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 2001: Jira configuration -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:2001"
+                                       version="1">
+      <ind-def:filepath>/etc/ai-agent/agent_config.yaml</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">jira_url:\s*.*</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 2002: PKI signing script -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:2002"
+                                       version="1">
+      <ind-def:filepath>/opt/ai-agent-governance/scripts/jira-pki-signing.py</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">#!/usr/bin/env python3</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 7001: Audit schema -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:7001"
+                                       version="1">
+      <ind-def:filepath>/opt/ai-agent-governance/policies/schemas/audit-trail.json</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">\$schema</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 7002: Audit directory variable -->
+    <ind-def:variable_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                              id="oval:gov.nist.ai:obj:7002"
+                              version="1">
+      <ind-def:var_ref>oval:gov.nist.ai:var:7002</ind-def:var_ref>
+    </ind-def:variable_object>
+
+    <!-- Object 13001: Budget limit -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:13001"
+                                       version="1">
+      <ind-def:filepath>/etc/ai-agent/agent_config.yaml</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">budget_limit:\s*\d+</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 13002: Cost tracking script -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:13002"
+                                       version="1">
+      <ind-def:filepath>/opt/ai-agent-governance/scripts/otel-cost-tracking.py</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">#!/usr/bin/env python3</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 17001: Interaction monitor -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:17001"
+                                       version="1">
+      <ind-def:filepath>/opt/ai-agent-governance/claude.md</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">MI-024</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+    <!-- Object 17002: Timeout configuration -->
+    <ind-def:textfilecontent54_object xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                       id="oval:gov.nist.ai:obj:17002"
+                                       version="1">
+      <ind-def:filepath>/opt/ai-agent-governance/claude.md</ind-def:filepath>
+      <ind-def:pattern operation="pattern match">timeout_minutes:\s*(\d+)</ind-def:pattern>
+      <ind-def:instance datatype="int">1</ind-def:instance>
+    </ind-def:textfilecontent54_object>
+
+  </objects>
+
+  <!-- ================================================================= -->
+  <!-- STATES                                                            -->
+  <!-- ================================================================= -->
+
+  <states>
+    <!-- State 1002: Tier 1-4 -->
+    <ind-def:textfilecontent54_state xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                      id="oval:gov.nist.ai:ste:1002"
+                                      version="1">
+      <ind-def:subexpression operation="pattern match">[1-4]</ind-def:subexpression>
+    </ind-def:textfilecontent54_state>
+
+    <!-- State 2003: Tier 3+ -->
+    <ind-def:textfilecontent54_state xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                      id="oval:gov.nist.ai:ste:2003"
+                                      version="1">
+      <ind-def:subexpression operation="pattern match">[34]</ind-def:subexpression>
+    </ind-def:textfilecontent54_state>
+
+    <!-- State 17002: Timeout 5 minutes -->
+    <ind-def:textfilecontent54_state xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent"
+                                      id="oval:gov.nist.ai:ste:17002"
+                                      version="1">
+      <ind-def:subexpression operation="equals" datatype="int">5</ind-def:subexpression>
+    </ind-def:textfilecontent54_state>
+
+  </states>
+
+  <!-- ================================================================= -->
+  <!-- VARIABLES                                                         -->
+  <!-- ================================================================= -->
+
+  <variables>
+    <!-- Variable 7002: Audit directory from environment -->
+    <constant_variable id="oval:gov.nist.ai:var:7002" version="1" datatype="string" comment="Audit trail directory">
+      <value>/var/log/ai-agent/audit-trails</value>
+    </constant_variable>
+  </variables>
+
+</oval_definitions>

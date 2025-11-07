@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AI Agent Governance Framework XCCDF Benchmark
+  Version: 2.1
+  Date: 2025-11-06
+
+  This XCCDF benchmark extends NIST 800-53 Rev 5 with AI-specific controls for LLM agents.
+  Compliance scanning can be automated using SCAP-compliant tools (OpenSCAP, Nessus, Tenable).
+-->
+<Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2"
+           xmlns:xhtml="http://www.w3.org/1999/xhtml"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:cpe="http://cpe.mitre.org/language/2.0"
+           xmlns:dc="http://purl.org/dc/elements/1.1/"
+           id="xccdf_gov.nist.ai-agent-governance_benchmark_AI-AGENT"
+           xml:lang="en"
+           xsi:schemaLocation="http://checklists.nist.gov/xccdf/1.2 http://scap.nist.gov/schema/xccdf/1.2/xccdf_1.2.xsd http://cpe.mitre.org/dictionary/2.0 http://cpe.mitre.org/files/cpe-dictionary_2.1.xsd">
+
+  <status date="2025-11-06">accepted</status>
+
+  <title>AI Agent Governance Framework Security Technical Implementation Guide (STIG)</title>
+
+  <description>
+    <xhtml:p>
+      This Security Technical Implementation Guide (STIG) provides security requirements for
+      AI agents operating in production environments. It extends NIST 800-53 Rev 5 controls
+      with AI-specific requirements derived from the NIST AI Risk Management Framework.
+    </xhtml:p>
+    <xhtml:p>
+      Target platforms: AI/LLM agents (GPT-4, Claude, Gemini, etc.) operating at Tier 1-4
+      privilege levels with access to enterprise systems and data.
+    </xhtml:p>
+  </description>
+
+  <notice id="terms-of-use" xml:lang="en">
+    This benchmark is provided for use in automated compliance scanning of AI agent deployments.
+    Adherence to these requirements reduces risk of data leakage, unauthorized access, cost overruns,
+    and other AI-specific security incidents.
+  </notice>
+
+  <front-matter xml:lang="en">
+    <xhtml:p>
+      <xhtml:b>Classification: </xhtml:b>PUBLIC
+      <xhtml:br/>
+      <xhtml:b>Release Date: </xhtml:b>2025-11-06
+      <xhtml:br/>
+      <xhtml:b>Version: </xhtml:b>2.1
+    </xhtml:p>
+  </front-matter>
+
+  <rear-matter xml:lang="en">
+    <xhtml:p>
+      For implementation guidance, see: https://github.com/ai-agent-governance-framework
+    </xhtml:p>
+  </rear-matter>
+
+  <reference href="https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final">
+    <dc:publisher>National Institute of Standards and Technology</dc:publisher>
+    <dc:title>NIST Special Publication 800-53 Revision 5</dc:title>
+  </reference>
+
+  <reference href="https://www.nist.gov/itl/ai-risk-management-framework">
+    <dc:publisher>National Institute of Standards and Technology</dc:publisher>
+    <dc:title>NIST AI Risk Management Framework (AI RMF 1.0)</dc:title>
+  </reference>
+
+  <plain-text id="release-info">
+    Release: 2.1 Benchmark Date: 06 Nov 2025
+  </plain-text>
+
+  <platform idref="cpe:/a:ai-agent-governance:runtime"/>
+
+  <version>2.1</version>
+
+  <!--
+    Profile: FedRAMP Moderate + AI Extensions
+    This profile includes FedRAMP Moderate baseline plus all AI-specific controls.
+  -->
+  <Profile id="xccdf_gov.nist.ai-agent-governance_profile_fedramp-moderate-ai">
+    <title>FedRAMP Moderate + AI Extensions</title>
+    <description>
+      FedRAMP Moderate baseline requirements plus AI-specific controls for production AI agents.
+      Suitable for Tier 3-4 agents accessing sensitive data or performing privileged operations.
+    </description>
+    <select idref="xccdf_gov.nist.ai_group_AC-6-AI-1" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_AC-6-AI-2" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_SC-4-AI-1" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_SC-4-AI-2" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_AU-3-AI-1" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_SA-15-AI-1" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_CA-7-AI-1" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_CA-7-AI-2" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_SI-10-AI-1" selected="true"/>
+  </Profile>
+
+  <!--
+    Profile: Development/Testing (Tier 1-2)
+    Lower-risk profile for non-production agents.
+  -->
+  <Profile id="xccdf_gov.nist.ai-agent-governance_profile_dev">
+    <title>Development/Testing Profile (Tier 1-2)</title>
+    <description>
+      Baseline security for development and testing AI agents with limited production access.
+    </description>
+    <select idref="xccdf_gov.nist.ai_group_AC-6-AI-1" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_SA-15-AI-1" selected="true"/>
+    <select idref="xccdf_gov.nist.ai_group_CA-7-AI-2" selected="true"/>
+  </Profile>
+
+  <!-- =================================================================== -->
+  <!-- GROUP: Access Control (AC) - AI Extensions                          -->
+  <!-- =================================================================== -->
+
+  <Group id="xccdf_gov.nist.ai_group_AC">
+    <title>Access Control (AC)</title>
+    <description>AI-specific access control requirements for tier enforcement and human approval.</description>
+
+    <!-- RULE: AC-6-AI-1 Tier Enforcement -->
+    <Rule id="xccdf_gov.nist.ai_group_AC-6-AI-1" severity="high" selected="true">
+      <version>AI-001</version>
+      <title>SV-AI-001 - AI Agent Tier Enforcement</title>
+
+      <description>
+        <xhtml:p>
+          AI agents must be assigned to appropriate tiers (1-4) with enforced privilege separation:
+          <xhtml:ul>
+            <xhtml:li><xhtml:b>Tier 1 (Observer):</xhtml:b> Read-only access, no modifications</xhtml:li>
+            <xhtml:li><xhtml:b>Tier 2 (Developer):</xhtml:b> Code changes, test deployments</xhtml:li>
+            <xhtml:li><xhtml:b>Tier 3 (Operations):</xhtml:b> Production deployments, requires approval</xhtml:li>
+            <xhtml:li><xhtml:b>Tier 4 (Architect):</xhtml:b> Infrastructure changes, multi-party approval</xhtml:li>
+          </xhtml:ul>
+          Tier assignment must be validated before granting permissions.
+        </xhtml:p>
+      </description>
+
+      <reference>
+        <dc:identifier>AC-6-AI-1</dc:identifier>
+        <dc:publisher>NIST</dc:publisher>
+        <dc:title>AI Agent Tier-Based Access Control</dc:title>
+      </reference>
+
+      <ident system="http://cyber.mil/cci">CCI-AI-005</ident>
+
+      <fixtext fixref="F-AI-001">
+        Configure agent tier in configuration file:
+
+        agent_config.yaml:
+          agent_id: "ops-agent-01"
+          tier: 3
+
+        Validate with governance check:
+        ./scripts/governance-check.sh --agent ops-agent-01 --tier 3
+
+        Ensure IAM policies match tier permissions.
+      </fixtext>
+
+      <fix id="F-AI-001" system="urn:xccdf:fix:script:sh">
+        <sub idref="xccdf_gov.nist.ai_value_agent_tier"/>
+        echo "Configuring agent tier: ${xccdf_value_agent_tier}"
+        ./scripts/governance-check.sh --agent "${xccdf_value_agent_id}" --tier "${xccdf_value_agent_tier}"
+      </fix>
+
+      <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+        <check-content-ref href="ai-agent-oval.xml" name="oval:gov.nist.ai:def:1001"/>
+      </check>
+
+      <check system="urn:xccdf:check:script:sh">
+        <check-export export-name="AGENT_ID" value-id="xccdf_gov.nist.ai_value_agent_id"/>
+        <check-export export-name="EXPECTED_TIER" value-id="xccdf_gov.nist.ai_value_agent_tier"/>
+        <check-content-ref href="check-tier-enforcement.sh"/>
+      </check>
+    </Rule>
+
+    <!-- RULE: AC-6-AI-2 Human Approval -->
+    <Rule id="xccdf_gov.nist.ai_group_AC-6-AI-2" severity="high" selected="true">
+      <version>AI-002</version>
+      <title>SV-AI-002 - Human-in-the-Loop Authorization (Human Primacy)</title>
+
+      <description>
+        <xhtml:p>
+          Tier 3+ agents must obtain human approval via Jira Change Request (CR) before executing
+          privileged operations. Approvals must be:
+          <xhtml:ul>
+            <xhtml:li>Documented in Jira with CR-YYYY-NNNN format</xhtml:li>
+            <xhtml:li>Cryptographically signed using PKI (RSA-4096)</xhtml:li>
+            <xhtml:li>Multi-party for Tier 4 (minimum 2 approvers)</xhtml:li>
+            <xhtml:li>Validated before deployment</xhtml:li>
+          </xhtml:ul>
+          This ensures human primacy (APP-001) in AI agent operations.
+        </xhtml:p>
+      </description>
+
+      <reference>
+        <dc:identifier>AC-6-AI-2</dc:identifier>
+        <dc:publisher>NIST</dc:publisher>
+      </reference>
+
+      <ident system="http://cyber.mil/cci">CCI-AI-006</ident>
+
+      <fixtext fixref="F-AI-002">
+        Obtain Jira CR approval before deployment:
+
+        1. Create Jira CR:
+           Title: "Deploy ops-agent-01 to Production"
+           Type: Change Request
+
+        2. Obtain PKI-signed approvals:
+           python3 scripts/jira-pki-signing.py sign --cr-id CR-2024-0001 \
+               --approver security-lead@example.com --private-key /path/to/key.pem
+
+        3. Verify signatures:
+           python3 scripts/jira-pki-signing.py verify --cr-id CR-2024-0001 \
+               --required-approvers security-lead@example.com tech-lead@example.com \
+               --public-keys-dir /path/to/public-keys
+
+        4. Deploy only after verification passes.
+      </fixtext>
+
+      <fix id="F-AI-002" system="urn:xccdf:fix:script:python">
+        # Verify Jira CR approval with PKI signatures
+        import sys
+        sys.path.insert(0, '/opt/ai-agent-governance/scripts')
+        from jira_pki_signing import JiraPKISigner
+
+        signer = JiraPKISigner('/opt/pki-keys')
+        results = signer.verify_multi_party_approval(
+            cr_id="${xccdf_value_cr_id}",
+            required_approvers=["security-lead@example.com", "tech-lead@example.com"],
+            public_keys_dir="/opt/pki-keys/public"
+        )
+
+        if results['overall_status'] != 'APPROVED':
+            print("FAIL: CR not approved")
+            sys.exit(1)
+        print("PASS: CR approved with valid signatures")
+      </fix>
+
+      <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+        <check-content-ref href="ai-agent-oval.xml" name="oval:gov.nist.ai:def:1002"/>
+      </check>
+    </Rule>
+  </Group>
+
+  <!-- =================================================================== -->
+  <!-- GROUP: Audit and Accountability (AU) - AI Extensions                -->
+  <!-- =================================================================== -->
+
+  <Group id="xccdf_gov.nist.ai_group_AU">
+    <title>Audit and Accountability (AU)</title>
+
+    <!-- RULE: AU-3-AI-1 AI Decision Auditability -->
+    <Rule id="xccdf_gov.nist.ai_group_AU-3-AI-1" severity="medium" selected="true">
+      <version>AI-007</version>
+      <title>SV-AI-007 - AI Decision Audit Trail</title>
+
+      <description>
+        <xhtml:p>
+          All AI agent decisions must be logged with sufficient detail to reproduce reasoning.
+          Audit trails must include:
+          <xhtml:ul>
+            <xhtml:li>agent_id, timestamp (UTC), actor</xhtml:li>
+            <xhtml:li>inputs (prompts, parameters)</xhtml:li>
+            <xhtml:li>outputs (responses, actions taken)</xhtml:li>
+            <xhtml:li>model version, control IDs</xhtml:li>
+            <xhtml:li>evidence hash (SHA-256)</xhtml:li>
+          </xhtml:ul>
+          Retention: 90 days hot storage + 7 years archive.
+        </xhtml:p>
+      </description>
+
+      <reference>
+        <dc:identifier>AU-3-AI-1</dc:identifier>
+      </reference>
+
+      <ident system="http://cyber.mil/cci">CCI-AI-008</ident>
+
+      <fixtext fixref="F-AI-007">
+        Implement audit trail per schema:
+        policies/schemas/audit-trail.json
+
+        Validate audit trails:
+        python3 scripts/validate-audit-trail.py
+
+        Ensure DynamoDB or S3 storage with encryption.
+      </fixtext>
+
+      <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+        <check-content-ref href="ai-agent-oval.xml" name="oval:gov.nist.ai:def:1007"/>
+      </check>
+    </Rule>
+  </Group>
+
+  <!-- =================================================================== -->
+  <!-- GROUP: System and Communications Protection (SC) - AI Extensions     -->
+  <!-- =================================================================== -->
+
+  <Group id="xccdf_gov.nist.ai_group_SC">
+    <title>System and Communications Protection (SC)</title>
+
+    <!-- RULE: SC-4-AI-1 Data Leakage Prevention -->
+    <Rule id="xccdf_gov.nist.ai_group_SC-4-AI-1" severity="high" selected="true">
+      <version>AI-003</version>
+      <title>SV-AI-003 - PII/Secrets Leakage Prevention</title>
+
+      <description>
+        <xhtml:p>
+          Prevent sensitive data leakage to hosted LLM provider APIs:
+          <xhtml:ul>
+            <xhtml:li>Redact PII before sending to LLM</xhtml:li>
+            <xhtml:li>Never include secrets, API keys, passwords</xhtml:li>
+            <xhtml:li>Use data classification labels</xhtml:li>
+            <xhtml:li>Monitor for accidental data exposure</xhtml:li>
+          </xhtml:ul>
+          Critical for HIPAA, PCI-DSS, GDPR compliance.
+        </xhtml:p>
+      </description>
+
+      <reference>
+        <dc:identifier>SC-4-AI-1</dc:identifier>
+      </reference>
+
+      <ident system="http://cyber.mil/cci">CCI-AI-003</ident>
+
+      <fixtext fixref="F-AI-003">
+        Implement data leakage prevention (MI-001):
+
+        - Use PII detection and redaction
+        - Scan for secrets before LLM submission
+        - Log all data sent to external APIs
+        - Use on-premise LLM for sensitive data
+      </fixtext>
+
+      <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+        <check-content-ref href="ai-agent-oval.xml" name="oval:gov.nist.ai:def:1003"/>
+      </check>
+    </Rule>
+  </Group>
+
+  <!-- =================================================================== -->
+  <!-- GROUP: Cost Controls (SA) - AI Extensions                           -->
+  <!-- =================================================================== -->
+
+  <Group id="xccdf_gov.nist.ai_group_SA">
+    <title>System and Services Acquisition (SA)</title>
+
+    <!-- RULE: SA-15-AI-1 Cost and Budget Controls -->
+    <Rule id="xccdf_gov.nist.ai_group_SA-15-AI-1" severity="high" selected="true">
+      <version>AI-013</version>
+      <title>SV-AI-013 - Cost and Budget Controls</title>
+
+      <description>
+        <xhtml:p>
+          AI agents must have hard budget limits with circuit breakers:
+          <xhtml:ul>
+            <xhtml:li>Daily and monthly budget caps</xhtml:li>
+            <xhtml:li>Real-time token/cost tracking</xhtml:li>
+            <xhtml:li>Automatic shutdown at 100% budget</xhtml:li>
+            <xhtml:li>Alerts at 80% threshold</xhtml:li>
+          </xhtml:ul>
+          Prevents runaway costs from infinite loops or misconfigurations.
+        </xhtml:p>
+      </description>
+
+      <reference>
+        <dc:identifier>SA-15-AI-1</dc:identifier>
+      </reference>
+
+      <ident system="http://cyber.mil/cci">CCI-AI-013</ident>
+
+      <fixtext fixref="F-AI-013">
+        Configure budget limits (MI-021):
+
+        agent_config.yaml:
+          budget_limit_daily: 100.00  # USD
+          budget_limit_monthly: 2000.00
+
+        Implement circuit breaker per policies/mitigation-catalog.md MI-021.
+
+        Track costs:
+        python3 scripts/otel-cost-tracking.py track-call --agent-id ops-agent-01 \
+            --model gpt-4 --input-tokens 1000 --output-tokens 500
+      </fixtext>
+
+      <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+        <check-content-ref href="ai-agent-oval.xml" name="oval:gov.nist.ai:def:1013"/>
+      </check>
+    </Rule>
+  </Group>
+
+  <!-- =================================================================== -->
+  <!-- GROUP: Continuous Monitoring (CA) - AI Extensions                    -->
+  <!-- =================================================================== -->
+
+  <Group id="xccdf_gov.nist.ai_group_CA">
+    <title>Continuous Monitoring (CA)</title>
+
+    <!-- RULE: CA-7-AI-2 Non-Deterministic Problem Detection -->
+    <Rule id="xccdf_gov.nist.ai_group_CA-7-AI-2" severity="medium" selected="true">
+      <version>AI-017</version>
+      <title>SV-AI-017 - Non-Deterministic Problem Detection (MI-024)</title>
+
+      <description>
+        <xhtml:p>
+          Monitor AI interactions for non-deterministic patterns:
+          <xhtml:ul>
+            <xhtml:li>Sessions exceeding 5 minutes without resolution</xhtml:li>
+            <xhtml:li>More than 10 iterations without convergence</xhtml:li>
+            <xhtml:li>Convergence score below 30%</xhtml:li>
+            <xhtml:li>Keywords: "unclear", "ambiguous", "which approach"</xhtml:li>
+          </xhtml:ul>
+          Escalate to human for requirements clarification. Saves costs and prevents incorrect implementations.
+        </xhtml:p>
+      </description>
+
+      <reference>
+        <dc:identifier>CA-7-AI-2</dc:identifier>
+      </reference>
+
+      <ident system="http://cyber.mil/cci">CCI-AI-017</ident>
+
+      <fixtext fixref="F-AI-017">
+        Implement LLMInteractionMonitor (MI-024):
+
+        from llm_interaction_monitor import LLMInteractionMonitor
+
+        monitor = LLMInteractionMonitor(
+            timeout_minutes=5,
+            max_iterations=10,
+            convergence_threshold=0.3
+        )
+
+        # Check before each interaction
+        should_stop, reason = monitor.check_interaction_limits()
+        if should_stop:
+            # Escalate to human
+            request_human_clarification()
+      </fixtext>
+
+      <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+        <check-content-ref href="ai-agent-oval.xml" name="oval:gov.nist.ai:def:1017"/>
+      </check>
+    </Rule>
+  </Group>
+
+  <!-- =================================================================== -->
+  <!-- VALUES - Configuration Parameters                                    -->
+  <!-- =================================================================== -->
+
+  <Value id="xccdf_gov.nist.ai_value_agent_id" type="string" operator="equals">
+    <title>Agent ID</title>
+    <description>Unique identifier for the AI agent</description>
+    <value>ops-agent-01</value>
+  </Value>
+
+  <Value id="xccdf_gov.nist.ai_value_agent_tier" type="number" operator="equals">
+    <title>Agent Tier</title>
+    <description>Agent tier (1-4)</description>
+    <value>3</value>
+  </Value>
+
+  <Value id="xccdf_gov.nist.ai_value_cr_id" type="string" operator="pattern match">
+    <title>Jira CR ID</title>
+    <description>Jira Change Request ID</description>
+    <value>CR-2024-0001</value>
+  </Value>
+
+  <Value id="xccdf_gov.nist.ai_value_budget_limit" type="number" operator="less than or equal">
+    <title>Budget Limit (USD)</title>
+    <description>Maximum monthly budget for agent</description>
+    <value>2000.00</value>
+  </Value>
+
+</Benchmark>
