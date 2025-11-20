@@ -1,0 +1,254 @@
+---
+# Kyverno ClusterPolicy: Enforce Tier-Based Resource Limits
+#
+# Purpose: Enforce resource limits per AI agent tier to prevent resource exhaustion
+# Aligned to: Framework MI-021 (Budget Limits), NIST SA-15-AI-1 (Cost Controls)
+#
+# Resource Limits by Tier:
+# - Tier 1 (Observer): Max 2 CPU, 4Gi memory
+# - Tier 2 (Developer): Max 4 CPU, 8Gi memory
+# - Tier 3 (Operations): Max 8 CPU, 16Gi memory, must define requests/limits
+# - Tier 4 (Architect): Max 4 CPU, 8Gi memory, must define requests/limits
+#
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-agent-resource-limits
+  annotations:
+    policies.kyverno.io/title: AI Agent Tier-Based Resource Limits
+    policies.kyverno.io/category: AI Agent Governance
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Enforces tier-based resource limits for AI agents to prevent resource
+      exhaustion and control costs. Aligns with framework budget controls.
+    framework.ai/control-id: MI-021
+    nist.gov/control-id: SA-15-AI-1
+spec:
+  # IMPORTANT: Start in 'Audit' mode, then switch to 'Enforce'
+  validationFailureAction: Audit  # Options: Enforce, Audit
+  background: true
+  
+  rules:
+  # ============================================================================
+  # RULE 1: Tier 1 - Maximum Resource Limits
+  # ============================================================================
+  - name: tier-1-max-resources
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          selector:
+            matchLabels:
+              tier: "1"
+    validate:
+      message: >-
+        Tier 1 agents cannot exceed 2 CPU and 4Gi memory.
+        Current limits: CPU={{request.object.spec.containers[0].resources.limits.cpu}},
+        Memory={{request.object.spec.containers[0].resources.limits.memory}}
+      foreach:
+      - list: "request.object.spec.containers[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.resources.limits.cpu || '0' }}"
+              operator: GreaterThan
+              value: "2"
+            - key: "{{ element.resources.limits.memory || '0' }}"
+              operator: GreaterThan
+              value: 4Gi
+
+  # ============================================================================
+  # RULE 2: Tier 2 - Maximum Resource Limits
+  # ============================================================================
+  - name: tier-2-max-resources
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          selector:
+            matchLabels:
+              tier: "2"
+    validate:
+      message: >-
+        Tier 2 agents cannot exceed 4 CPU and 8Gi memory.
+        Current limits: CPU={{request.object.spec.containers[0].resources.limits.cpu}},
+        Memory={{request.object.spec.containers[0].resources.limits.memory}}
+      foreach:
+      - list: "request.object.spec.containers[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.resources.limits.cpu || '0' }}"
+              operator: GreaterThan
+              value: "4"
+            - key: "{{ element.resources.limits.memory || '0' }}"
+              operator: GreaterThan
+              value: 8Gi
+
+  # ============================================================================
+  # RULE 3: Tier 3 - Must Define Requests and Limits
+  # ============================================================================
+  - name: tier-3-requires-resource-definitions
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          selector:
+            matchLabels:
+              tier: "3"
+    validate:
+      message: >-
+        Tier 3 agents must define both resource requests and limits for CPU and memory.
+        This is required for production workloads to ensure predictable performance.
+      foreach:
+      - list: "request.object.spec.containers[]"
+        pattern:
+          resources:
+            requests:
+              cpu: "?*"
+              memory: "?*"
+            limits:
+              cpu: "?*"
+              memory: "?*"
+
+  # ============================================================================
+  # RULE 4: Tier 3 - Maximum Resource Limits
+  # ============================================================================
+  - name: tier-3-max-resources
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          selector:
+            matchLabels:
+              tier: "3"
+    validate:
+      message: >-
+        Tier 3 agents cannot exceed 8 CPU and 16Gi memory.
+        Current limits: CPU={{request.object.spec.containers[0].resources.limits.cpu}},
+        Memory={{request.object.spec.containers[0].resources.limits.memory}}
+      foreach:
+      - list: "request.object.spec.containers[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.resources.limits.cpu || '0' }}"
+              operator: GreaterThan
+              value: "8"
+            - key: "{{ element.resources.limits.memory || '0' }}"
+              operator: GreaterThan
+              value: 16Gi
+
+  # ============================================================================
+  # RULE 5: Tier 4 - Must Define Requests and Limits
+  # ============================================================================
+  - name: tier-4-requires-resource-definitions
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          selector:
+            matchLabels:
+              tier: "4"
+    validate:
+      message: >-
+        Tier 4 agents must define both resource requests and limits for CPU and memory.
+        This ensures strategic workloads have predictable resource allocation.
+      foreach:
+      - list: "request.object.spec.containers[]"
+        pattern:
+          resources:
+            requests:
+              cpu: "?*"
+              memory: "?*"
+            limits:
+              cpu: "?*"
+              memory: "?*"
+
+  # ============================================================================
+  # RULE 6: Tier 4 - Maximum Resource Limits
+  # ============================================================================
+  - name: tier-4-max-resources
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          selector:
+            matchLabels:
+              tier: "4"
+    validate:
+      message: >-
+        Tier 4 agents cannot exceed 4 CPU and 8Gi memory.
+        Tier 4 is for strategic planning, not resource-intensive workloads.
+        Current limits: CPU={{request.object.spec.containers[0].resources.limits.cpu}},
+        Memory={{request.object.spec.containers[0].resources.limits.memory}}
+      foreach:
+      - list: "request.object.spec.containers[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.resources.limits.cpu || '0' }}"
+              operator: GreaterThan
+              value: "4"
+            - key: "{{ element.resources.limits.memory || '0' }}"
+              operator: GreaterThan
+              value: 8Gi
+
+  # ============================================================================
+  # RULE 7: All Tiers - Ephemeral Storage Limits
+  # ============================================================================
+  - name: all-tiers-ephemeral-storage-limit
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          selector:
+            matchLabels:
+              framework-version: "2.1.0"
+    validate:
+      message: >-
+        AI agents must define ephemeral-storage limits to prevent disk exhaustion.
+        Maximum allowed: 10Gi per container.
+      foreach:
+      - list: "request.object.spec.containers[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.resources.limits['ephemeral-storage'] || '0' }}"
+              operator: GreaterThan
+              value: 10Gi
+
+  # ============================================================================
+  # RULE 8: Production - Minimum Resource Requests
+  # ============================================================================
+  - name: production-minimum-requests
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - ai-agents-prod
+    validate:
+      message: >-
+        Production AI agents must define minimum resource requests to ensure
+        quality of service. Minimum: 100m CPU, 128Mi memory.
+      foreach:
+      - list: "request.object.spec.containers[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.resources.requests.cpu || '0' }}"
+              operator: LessThan
+              value: "100m"
+            - key: "{{ element.resources.requests.memory || '0' }}"
+              operator: LessThan
+              value: 128Mi

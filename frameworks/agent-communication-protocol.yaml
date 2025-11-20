@@ -1,0 +1,249 @@
+---
+# Agent Communication Protocol Specification
+# Version: 1.0
+#
+# Defines the structured protocol for agent-to-agent communication.
+# Used by agent_message_validator.py for message validation and authentication.
+
+version: "1.0"
+protocol_name: "AI Agent Inter-Process Communication (AAIPC)"
+
+# Message Schema (JSON Schema format)
+message_schema:
+  type: object
+  required:
+    - message_id
+    - sender_agent_id
+    - recipient_agent_id
+    - message_type
+    - payload
+    - timestamp
+    - signature
+  
+  properties:
+    message_id:
+      type: string
+      format: uuid
+      description: "Unique message identifier (UUID v4)"
+    
+    sender_agent_id:
+      type: string
+      pattern: "^[a-z0-9-]+$"
+      description: "Sending agent identifier"
+      examples:
+        - "security-agent"
+        - "it-ops-agent"
+    
+    recipient_agent_id:
+      type: string
+      pattern: "^[a-z0-9-]+$"
+      description: "Receiving agent identifier"
+    
+    message_type:
+      type: string
+      enum:
+        - "task_request"
+        - "task_response"
+        - "status_update"
+        - "error_notification"
+        - "approval_request"
+      description: "Type of message"
+    
+    payload:
+      type: object
+      description: "Message-specific data (schema varies by message_type)"
+    
+    timestamp:
+      type: string
+      format: date-time
+      description: "ISO 8601 timestamp (UTC)"
+    
+    correlation_id:
+      type: string
+      format: uuid
+      description: "Links related messages (optional)"
+    
+    signature:
+      type: string
+      pattern: "^[a-f0-9]{64}$"
+      description: "HMAC-SHA256 signature (hex-encoded)"
+
+# Authentication Configuration
+authentication:
+  method: "HMAC-SHA256"
+  shared_secret_location: "kubernetes-secret"
+  secret_name: "agent-communication-secrets"
+  secret_rotation_days: 90
+  
+  # Secret format in Kubernetes Secret:
+  # data:
+  #   security-agent: <base64-encoded-secret>
+  #   it-ops-agent: <base64-encoded-secret>
+  #   ...
+
+# Message Ordering and Reliability
+message_ordering:
+  guarantee: "at-least-once"
+  deduplication_window_seconds: 300  # 5 minutes
+  max_retry_attempts: 3
+  retry_backoff_seconds: [1, 5, 15]  # Exponential backoff
+  max_message_age_seconds: 300  # Reject messages older than 5 minutes
+
+# Payload Schemas by Message Type
+payload_schemas:
+  task_request:
+    type: object
+    required:
+      - task
+      - parameters
+    properties:
+      task:
+        type: string
+        description: "Task identifier"
+      parameters:
+        type: object
+        description: "Task-specific parameters"
+      priority:
+        type: string
+        enum: ["low", "medium", "high", "critical"]
+        default: "medium"
+      deadline:
+        type: string
+        format: date-time
+        description: "Task deadline (optional)"
+  
+  task_response:
+    type: object
+    required:
+      - status
+      - result
+    properties:
+      status:
+        type: string
+        enum: ["success", "failure", "partial"]
+      result:
+        type: object
+        description: "Task result data"
+      error:
+        type: string
+        description: "Error message (if status=failure)"
+      execution_time_seconds:
+        type: number
+        description: "Task execution time"
+  
+  status_update:
+    type: object
+    required:
+      - status
+    properties:
+      status:
+        type: string
+        enum: ["started", "in_progress", "completed", "failed"]
+      progress_percentage:
+        type: number
+        minimum: 0
+        maximum: 100
+      message:
+        type: string
+        description: "Human-readable status message"
+  
+  error_notification:
+    type: object
+    required:
+      - error_type
+      - error_message
+    properties:
+      error_type:
+        type: string
+        enum: ["validation_error", "execution_error", "timeout", "resource_exhausted"]
+      error_message:
+        type: string
+      stack_trace:
+        type: string
+        description: "Stack trace (optional)"
+      retry_recommended:
+        type: boolean
+        default: false
+  
+  approval_request:
+    type: object
+    required:
+      - action
+      - reason
+    properties:
+      action:
+        type: string
+        description: "Action requiring approval"
+      reason:
+        type: string
+        description: "Justification for action"
+      risk_level:
+        type: string
+        enum: ["low", "medium", "high", "critical"]
+      estimated_cost:
+        type: number
+        description: "Estimated cost in USD"
+
+# Example Messages
+examples:
+  task_request:
+    message_id: "550e8400-e29b-41d4-a716-446655440000"
+    sender_agent_id: "architect-agent"
+    recipient_agent_id: "security-agent"
+    message_type: "task_request"
+    payload:
+      task: "scan_infrastructure"
+      parameters:
+        scope: "production"
+        depth: "full"
+      priority: "high"
+    timestamp: "2025-11-20T15:45:00Z"
+    correlation_id: "project-abc-123"
+    signature: "a3f5b8c9d2e1f4a7b6c5d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9"
+  
+  task_response:
+    message_id: "660e9511-f30c-52e5-b827-557766551111"
+    sender_agent_id: "security-agent"
+    recipient_agent_id: "architect-agent"
+    message_type: "task_response"
+    payload:
+      status: "success"
+      result:
+        vulnerabilities_found: 3
+        critical_count: 1
+        high_count: 2
+        report_url: "https://reports.example.com/scan-123"
+      execution_time_seconds: 45.2
+    timestamp: "2025-11-20T15:46:00Z"
+    correlation_id: "project-abc-123"
+    signature: "b4g6c9d3f2e1a5b8c7d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0"
+
+# Rate Limiting (per agent pair)
+rate_limiting:
+  max_messages_per_minute: 60
+  max_messages_per_hour: 1000
+  burst_size: 10
+
+# Monitoring and Observability
+observability:
+  metrics:
+    - name: "agent_messages_sent_total"
+      type: "counter"
+      labels: ["sender_agent_id", "recipient_agent_id", "message_type"]
+    
+    - name: "agent_messages_received_total"
+      type: "counter"
+      labels: ["sender_agent_id", "recipient_agent_id", "message_type"]
+    
+    - name: "agent_message_validation_failures_total"
+      type: "counter"
+      labels: ["sender_agent_id", "recipient_agent_id", "failure_reason"]
+    
+    - name: "agent_message_latency_seconds"
+      type: "histogram"
+      labels: ["sender_agent_id", "recipient_agent_id"]
+  
+  logging:
+    log_all_messages: false  # Set to true for debugging
+    log_validation_failures: true
+    log_format: "json"  # For SIEM ingestion

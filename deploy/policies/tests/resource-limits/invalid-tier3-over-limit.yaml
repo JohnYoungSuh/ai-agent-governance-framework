@@ -1,0 +1,35 @@
+---
+# INVALID: Tier 3 pod exceeding resource limits (should fail)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-tier3-invalid
+  namespace: ai-agents-prod
+  labels:
+    app: test-agent-bad
+    tier: "3"
+    framework-version: "2.1.0"
+  annotations:
+    governance.ai/jira-cr-id: "CR-2025-TEST"
+    governance.ai/cost-center: "engineering"
+spec:
+  serviceAccountName: tier-3-ops-sa
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  containers:
+  - name: agent
+    image: nginx:1.21
+    resources:
+      requests:
+        cpu: 2
+        memory: 4Gi
+      limits:
+        # VIOLATION: Tier 3 max is 8 CPU, 16Gi memory
+        cpu: 16
+        memory: 32Gi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      readOnlyRootFilesystem: true

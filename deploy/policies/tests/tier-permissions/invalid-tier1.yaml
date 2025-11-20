@@ -1,0 +1,42 @@
+---
+# INVALID: Tier 1 agent with wrong service account (should fail)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-tier1-invalid
+  namespace: ai-agents-dev
+  labels:
+    app: test-agent-bad
+    tier: "1"
+    framework-version: "2.1.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-agent-bad
+  template:
+    metadata:
+      labels:
+        app: test-agent-bad
+        tier: "1"
+    spec:
+      # VIOLATION: Tier 1 should use tier-1-readonly-sa
+      serviceAccountName: tier-3-ops-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: agent
+        image: nginx:1.21
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 1
+            memory: 2Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true

@@ -1,0 +1,183 @@
+---
+# Gatekeeper ConstraintTemplate: AI Agent Tier-Based Permission Enforcement
+# 
+# Purpose: Enforce tier-based access control for AI agents
+# Aligned to: NIST AC-6 (Least Privilege), Framework MI-020 (Tier Enforcement)
+#
+# Policy Rules:
+# - Tier 1 agents must use tier-1-readonly-sa service account
+# - Tier 2 agents must use tier-2-dev-sa service account  
+# - Tier 3 agents in production require governance.ai/jira-cr-id annotation
+# - Tier 4 agents require governance.ai/approved-by annotation
+# - All agents must have tier label defined
+#
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8saiagenttierpermissions
+  annotations:
+    description: "Enforce AI agent tier-based permission boundaries"
+    framework.ai/control-id: "MI-020"
+    nist.gov/control-id: "AC-6"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sAIAgentTierPermissions
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            # Tier-to-ServiceAccount mapping
+            tierServiceAccounts:
+              type: object
+              properties:
+                tier1:
+                  type: string
+                  default: "tier-1-readonly-sa"
+                tier2:
+                  type: string
+                  default: "tier-2-dev-sa"
+                tier3:
+                  type: string
+                  default: "tier-3-ops-sa"
+                tier4:
+                  type: string
+                  default: "tier-4-arch-sa"
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8saiagenttierpermissions
+
+        # Helper: Get tier from labels
+        get_tier(labels) = tier {
+          tier := labels.tier
+        }
+
+        # Helper: Get service account name
+        get_service_account(obj) = sa {
+          sa := obj.spec.serviceAccountName
+        }
+
+        # Helper: Get namespace
+        get_namespace(obj) = ns {
+          ns := obj.metadata.namespace
+        }
+
+        # Helper: Check if annotation exists
+        has_annotation(obj, key) {
+          obj.metadata.annotations[key]
+        }
+
+        # VIOLATION 1: Missing tier label
+        violation[{"msg": msg}] {
+          # Check if this is an AI agent (has framework-version label)
+          input.review.object.metadata.labels["framework-version"]
+          
+          # But missing tier label
+          not input.review.object.metadata.labels.tier
+          
+          msg := "AI agent deployments must have 'tier' label (1, 2, 3, or 4)"
+        }
+
+        # VIOLATION 2: Invalid tier value
+        violation[{"msg": msg}] {
+          tier := get_tier(input.review.object.metadata.labels)
+          not tier_is_valid(tier)
+          
+          msg := sprintf("Invalid tier '%v'. Must be '1', '2', '3', or '4'", [tier])
+        }
+
+        tier_is_valid(tier) {
+          tier == "1"
+        }
+        tier_is_valid(tier) {
+          tier == "2"
+        }
+        tier_is_valid(tier) {
+          tier == "3"
+        }
+        tier_is_valid(tier) {
+          tier == "4"
+        }
+
+        # VIOLATION 3: Tier 1 must use read-only service account
+        violation[{"msg": msg}] {
+          tier := get_tier(input.review.object.metadata.labels)
+          tier == "1"
+          
+          sa := get_service_account(input.review.object)
+          expected_sa := object.get(input.parameters.tierServiceAccounts, "tier1", "tier-1-readonly-sa")
+          sa != expected_sa
+          
+          msg := sprintf("Tier 1 agents must use service account '%v', found '%v'", [expected_sa, sa])
+        }
+
+        # VIOLATION 4: Tier 2 must use dev service account
+        violation[{"msg": msg}] {
+          tier := get_tier(input.review.object.metadata.labels)
+          tier == "2"
+          
+          sa := get_service_account(input.review.object)
+          expected_sa := object.get(input.parameters.tierServiceAccounts, "tier2", "tier-2-dev-sa")
+          sa != expected_sa
+          
+          msg := sprintf("Tier 2 agents must use service account '%v', found '%v'", [expected_sa, sa])
+        }
+
+        # VIOLATION 5: Tier 3 must use ops service account
+        violation[{"msg": msg}] {
+          tier := get_tier(input.review.object.metadata.labels)
+          tier == "3"
+          
+          sa := get_service_account(input.review.object)
+          expected_sa := object.get(input.parameters.tierServiceAccounts, "tier3", "tier-3-ops-sa")
+          sa != expected_sa
+          
+          msg := sprintf("Tier 3 agents must use service account '%v', found '%v'", [expected_sa, sa])
+        }
+
+        # VIOLATION 6: Tier 3 in production requires Jira CR annotation
+        violation[{"msg": msg}] {
+          tier := get_tier(input.review.object.metadata.labels)
+          tier == "3"
+          
+          ns := get_namespace(input.review.object)
+          contains(ns, "prod")
+          
+          not has_annotation(input.review.object, "governance.ai/jira-cr-id")
+          
+          msg := "Tier 3 agents in production namespace require 'governance.ai/jira-cr-id' annotation (e.g., CR-2025-1042)"
+        }
+
+        # VIOLATION 7: Tier 4 must use architect service account
+        violation[{"msg": msg}] {
+          tier := get_tier(input.review.object.metadata.labels)
+          tier == "4"
+          
+          sa := get_service_account(input.review.object)
+          expected_sa := object.get(input.parameters.tierServiceAccounts, "tier4", "tier-4-arch-sa")
+          sa != expected_sa
+          
+          msg := sprintf("Tier 4 agents must use service account '%v', found '%v'", [expected_sa, sa])
+        }
+
+        # VIOLATION 8: Tier 4 requires approval annotation
+        violation[{"msg": msg}] {
+          tier := get_tier(input.review.object.metadata.labels)
+          tier == "4"
+          
+          not has_annotation(input.review.object, "governance.ai/approved-by")
+          
+          msg := "Tier 4 agents require 'governance.ai/approved-by' annotation with approver name"
+        }
+
+        # VIOLATION 9: Production deployments require cost-center annotation
+        violation[{"msg": msg}] {
+          ns := get_namespace(input.review.object)
+          contains(ns, "prod")
+          
+          not has_annotation(input.review.object, "governance.ai/cost-center")
+          
+          msg := "Production AI agents require 'governance.ai/cost-center' annotation for budget tracking"
+        }

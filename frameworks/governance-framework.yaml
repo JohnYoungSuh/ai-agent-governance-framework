@@ -3,15 +3,31 @@
 # This is the SINGLE SOURCE OF TRUTH for all governance data
 # All scripts and documentation should reference this file
 
-version: "1.0"
+version: "3.0"
 metadata:
   title: "AI Agent Governance Framework - Master Configuration"
   namespace: "%project_name$"
-  updated: "2025-10-23"
+  updated: "2025-11-20"
   maintainer: "Governance Working Group"
   description: |
     Central configuration for all governance rules, strategic goals,
     approval tiers, revenue types, and evaluation criteria.
+    
+    VERSION 3.0 CHANGES:
+    - Added autonomy framework (target: ≥80% autonomous operations)
+    - Added universal cost attribution framework (target: 100% attribution)
+    - Integrated risk-based automated approval system
+    - Added mandatory resource tagging enforcement
+    - Added real-time chargeback/showback capabilities
+  
+  business_goals:
+    autonomy_target: "≥80% of actions auto-approved (≤20% human-in-the-loop)"
+    cost_attribution_target: "100% of costs automatically attributed with zero manual reconciliation"
+  
+  related_frameworks:
+    - "frameworks/autonomy-framework.yaml"
+    - "frameworks/cost-attribution-framework.yaml"
+    - "frameworks/agent-guardrail.yaml"
 
 # ============================================================================
 # STRATEGIC GOALS

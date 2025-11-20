@@ -1,0 +1,151 @@
+---
+# Agent Behavior Baselines Configuration
+# 
+# Statistical baselines for normal agent behavior.
+# Used by agent_behavior_monitor.py for anomaly detection.
+#
+# Update these baselines after observing agent behavior in production for 1-2 weeks.
+
+version: "1.0"
+
+baselines:
+  security-agent:
+    tier: 3
+    
+    # Request rate statistics (requests/hour)
+    avg_requests_per_hour: 10.0
+    std_requests_per_hour: 2.0
+    
+    # Token usage statistics (tokens/request)
+    avg_tokens_per_request: 500
+    std_tokens_per_request: 100
+    
+    # Cost statistics (USD/request)
+    avg_cost_per_request: 0.05
+    std_cost_per_request: 0.01
+    
+    # Allowed behaviors
+    typical_actions:
+      - scan_vulnerabilities
+      - check_compliance
+      - generate_report
+      - analyze_security_posture
+      - review_code
+      - audit_configuration
+    
+    allowed_api_endpoints:
+      - trivy.io
+      - github.com/api
+      - aquasec.com
+      - snyk.io
+      - owasp.org
+    
+    # Circuit breaker configuration
+    circuit_breaker:
+      enabled: true
+      mode: alert_only  # Options: alert_only, auto_pause
+      cooldown_minutes: 30
+      
+      # Anomaly thresholds (in standard deviations)
+      request_rate_threshold: 5.0
+      token_usage_threshold: 10.0
+      cost_threshold: 3.0
+  
+  it-ops-agent:
+    tier: 3
+    
+    avg_requests_per_hour: 15.0
+    std_requests_per_hour: 3.0
+    
+    avg_tokens_per_request: 400
+    std_tokens_per_request: 80
+    
+    avg_cost_per_request: 0.04
+    std_cost_per_request: 0.008
+    
+    typical_actions:
+      - monitor_infrastructure
+      - restart_service
+      - scale_deployment
+      - check_logs
+      - update_configuration
+    
+    allowed_api_endpoints:
+      - kubernetes.default.svc
+      - prometheus:9090
+      - grafana:3000
+      - datadog.com/api
+    
+    circuit_breaker:
+      enabled: true
+      mode: alert_only
+      cooldown_minutes: 30
+      request_rate_threshold: 5.0
+      token_usage_threshold: 10.0
+      cost_threshold: 3.0
+  
+  ai-agent:
+    tier: 2
+    
+    avg_requests_per_hour: 20.0
+    std_requests_per_hour: 4.0
+    
+    avg_tokens_per_request: 800
+    std_tokens_per_request: 150
+    
+    avg_cost_per_request: 0.08
+    std_cost_per_request: 0.015
+    
+    typical_actions:
+      - analyze_data
+      - generate_insights
+      - train_model
+      - evaluate_performance
+      - create_visualization
+    
+    allowed_api_endpoints:
+      - openai.com/v1
+      - anthropic.com/v1
+      - huggingface.co/api
+      - mlflow:5000
+    
+    circuit_breaker:
+      enabled: true
+      mode: alert_only
+      cooldown_minutes: 30
+      request_rate_threshold: 5.0
+      token_usage_threshold: 10.0
+      cost_threshold: 3.0
+  
+  architect-agent:
+    tier: 4
+    
+    avg_requests_per_hour: 5.0
+    std_requests_per_hour: 1.5
+    
+    avg_tokens_per_request: 1200
+    std_tokens_per_request: 250
+    
+    avg_cost_per_request: 0.12
+    std_cost_per_request: 0.025
+    
+    typical_actions:
+      - design_architecture
+      - review_design
+      - create_documentation
+      - analyze_requirements
+      - recommend_solution
+    
+    allowed_api_endpoints:
+      - github.com/api
+      - confluence.atlassian.com
+      - miro.com/api
+      - lucidchart.com/api
+    
+    circuit_breaker:
+      enabled: true
+      mode: alert_only
+      cooldown_minutes: 30
+      request_rate_threshold: 5.0
+      token_usage_threshold: 10.0
+      cost_threshold: 3.0

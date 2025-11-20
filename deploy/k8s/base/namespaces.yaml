@@ -7,6 +7,10 @@ metadata:
     environment: dev
     framework: ai-governance
     framework-version: "2.1.0"
+    # Pod Security Admission (K8s 1.25+) - Critical Policy #1
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
 ---
 apiVersion: v1
 kind: Namespace
@@ -16,6 +20,10 @@ metadata:
     environment: staging
     framework: ai-governance
     framework-version: "2.1.0"
+    # Pod Security Admission (K8s 1.25+) - Critical Policy #1
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
 ---
 apiVersion: v1
 kind: Namespace
@@ -25,6 +33,10 @@ metadata:
     environment: prod
     framework: ai-governance
     framework-version: "2.1.0"
+    # Pod Security Admission (K8s 1.25+) - Critical Policy #1
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
 ---
 apiVersion: v1
 kind: Namespace

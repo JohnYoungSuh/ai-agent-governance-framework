@@ -1,0 +1,36 @@
+---
+# Gatekeeper Constraint: Apply Tier Permission Policy
+#
+# This constraint applies the K8sAIAgentTierPermissions template to all
+# AI agent deployments in namespaces with label 'framework: ai-governance'
+#
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sAIAgentTierPermissions
+metadata:
+  name: ai-agent-tier-enforcement
+  annotations:
+    description: "Enforce tier-based permissions for all AI agents"
+    framework.ai/control-id: "MI-020"
+    nist.gov/control-id: "AC-6"
+spec:
+  # IMPORTANT: Start in 'dryrun' mode to audit violations without blocking
+  # Change to 'deny' after validating existing deployments
+  enforcementAction: dryrun  # Options: deny, dryrun, warn
+  
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
+    namespaceSelector:
+      matchExpressions:
+      - key: framework
+        operator: In
+        values: ["ai-governance"]
+  
+  parameters:
+    # Service account mapping per tier
+    tierServiceAccounts:
+      tier1: "tier-1-readonly-sa"
+      tier2: "tier-2-dev-sa"
+      tier3: "tier-3-ops-sa"
+      tier4: "tier-4-arch-sa"

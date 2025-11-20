@@ -1,0 +1,650 @@
+---
+# Universal Cost Attribution Framework
+# Version: 3.0
+#
+# Purpose: Ensure 100% of costs are automatically attributed with zero manual reconciliation
+# Goal: Achieve 100% cost attribution completeness across all resource types
+#
+# This framework enforces mandatory cost tagging, tracks shared resources, and provides
+# real-time chargeback/showback capabilities.
+
+version: "3.0"
+framework_name: "Universal Cost Attribution and Chargeback"
+
+# ============================================================================
+# MANDATORY RESOURCE TAGGING
+# ============================================================================
+
+mandatory_tagging:
+  description: "Admission control enforcement of cost attribution tags"
+  enforcement_mechanism: "admission_controller_webhook"
+  
+  required_tags:
+    # Business attribution (inherited from namespace)
+    - key: "cost-center"
+      value_pattern: "^CC-[0-9]{4}$"
+      source: "namespace_annotation"
+      required: true
+      validation_source: "finance_system_api"
+      example: "CC-1234"
+      
+    - key: "project-id"
+      value_pattern: "^PROJ-[A-Z0-9]{6}$"
+      source: "namespace_annotation"
+      required: true
+      validation_source: "project_management_system_api"
+      example: "PROJ-ABC123"
+      
+    - key: "business-unit"
+      value_pattern: "^(engineering|operations|research|sales|marketing|finance)$"
+      source: "namespace_annotation"
+      required: true
+      validation_source: "org_hierarchy_api"
+      example: "engineering"
+      
+    - key: "environment"
+      value_pattern: "^(dev|staging|prod)$"
+      source: "namespace_label"
+      required: true
+      auto_populate: true
+      example: "prod"
+    
+    # Agent attribution (applied to pods)
+    - key: "agent-id"
+      value_pattern: "^[a-z0-9-]+$"
+      source: "pod_label"
+      required: true
+      example: "security-agent"
+      
+    - key: "agent-tier"
+      value_pattern: "^[1-4]$"
+      source: "pod_label"
+      required: true
+      example: "3"
+      
+    - key: "agent-owner"
+      value_pattern: "^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$"
+      source: "pod_annotation"
+      required: true
+      validation_source: "identity_provider"
+      example: "team-lead@company.com"
+    
+    # Resource attribution (auto-populated)
+    - key: "resource-owner"
+      value_pattern: "^agent:[a-z0-9-]+$"
+      source: "created_by_annotation"
+      required: true
+      auto_populate: true
+      example: "agent:security-agent"
+      
+    - key: "creation-timestamp"
+      value_pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+      source: "metadata_creation_timestamp"
+      required: true
+      auto_populate: true
+      example: "2025-11-20T15:30:00Z"
+      
+    - key: "resource-purpose"
+      value_pattern: "^(compute|storage|network|observability|security)$"
+      source: "pod_label"
+      required: true
+      example: "compute"
+  
+  tag_propagation:
+    description: "Automatically propagate tags to child resources"
+    
+    inherit_from_namespace:
+      - "cost-center"
+      - "project-id"
+      - "business-unit"
+      - "environment"
+    
+    inherit_from_parent_resource:
+      - "agent-id"
+      - "agent-tier"
+      - "agent-owner"
+      - "resource-owner"
+    
+    propagate_to_child_resources:
+      - "persistent_volumes"
+      - "services"
+      - "ingress_rules"
+      - "network_policies"
+      - "config_maps"
+      - "secrets"
+  
+  enforcement:
+    action: "deny_resource_creation"
+    exemptions: []  # No exemptions for cost attribution
+    audit_log: "all_tagging_decisions"
+    
+  validation:
+    # Real-time validation against authoritative sources
+    validate_on_create: true
+    validate_on_update: true
+    cache_validation_results: true
+    cache_ttl: "5_minutes"
+
+# ============================================================================
+# SHARED RESOURCE COST ALLOCATION
+# ============================================================================
+
+shared_cost_allocation:
+  description: "Proportional allocation of shared infrastructure costs"
+  allocation_frequency: "hourly"
+  
+  shared_resources:
+    # Network costs
+    network_egress:
+      allocation_method: "proportional_by_bytes_transferred"
+      metering_source: "network_flow_logs"
+      attribution_key: "source_pod_label.agent-id"
+      cost_calculation:
+        - metric: "egress_bytes"
+          rate: "per_gb"
+          rate_card: "network_egress_rate_card"
+      
+    load_balancer:
+      allocation_method: "proportional_by_request_count"
+      metering_source: "ingress_controller_metrics"
+      attribution_key: "backend_service_label.agent-id"
+      cost_calculation:
+        - metric: "request_count"
+          rate: "per_million_requests"
+        - metric: "data_processed_gb"
+          rate: "per_gb"
+      
+    network_bandwidth:
+      allocation_method: "proportional_by_bandwidth_consumed"
+      metering_source: "network_interface_metrics"
+      attribution_key: "pod_label.agent-id"
+    
+    # Storage costs
+    persistent_volume:
+      allocation_method: "direct_attribution"
+      metering_source: "volume_claim_metadata"
+      attribution_key: "claim_label.agent-id"
+      cost_calculation:
+        - metric: "storage_gb_hours"
+          rate: "per_gb_hour"
+          rate_card: "storage_rate_card_by_type"
+      
+    object_storage:
+      allocation_method: "proportional_by_bytes_stored"
+      metering_source: "storage_bucket_tags"
+      attribution_key: "object_tag.agent-id"
+      cost_calculation:
+        - metric: "storage_gb_hours"
+          rate: "per_gb_hour"
+        - metric: "api_requests"
+          rate: "per_thousand_requests"
+      
+    snapshot_storage:
+      allocation_method: "direct_attribution"
+      metering_source: "snapshot_metadata"
+      attribution_key: "snapshot_tag.agent-id"
+    
+    # Observability costs
+    metrics_storage:
+      allocation_method: "proportional_by_metric_count"
+      metering_source: "metrics_database"
+      attribution_key: "metric_label.agent-id"
+      cost_calculation:
+        - metric: "metric_samples_per_hour"
+          rate: "per_million_samples"
+      
+    log_storage:
+      allocation_method: "proportional_by_log_volume"
+      metering_source: "log_aggregator"
+      attribution_key: "log_label.agent-id"
+      cost_calculation:
+        - metric: "log_bytes_per_hour"
+          rate: "per_gb"
+      
+    trace_storage:
+      allocation_method: "proportional_by_trace_count"
+      metering_source: "trace_backend"
+      attribution_key: "trace_tag.agent-id"
+    
+    # Platform overhead
+    control_plane:
+      allocation_method: "proportional_by_pod_count"
+      metering_source: "cluster_inventory"
+      attribution_key: "pod_label.agent-id"
+      cost_calculation:
+        - metric: "pod_hours"
+          rate: "platform_overhead_rate_per_pod_hour"
+      
+    dns_service:
+      allocation_method: "proportional_by_query_count"
+      metering_source: "dns_query_logs"
+      attribution_key: "source_pod_label.agent-id"
+      
+    certificate_management:
+      allocation_method: "proportional_by_certificate_count"
+      metering_source: "certificate_inventory"
+      attribution_key: "certificate_owner_label.agent-id"
+  
+  cost_rollup_hierarchies:
+    - level: "agent-id"
+      description: "Individual agent costs"
+      
+    - level: "agent-tier"
+      description: "Costs by tier level"
+      
+    - level: "project-id"
+      description: "Project-level costs"
+      
+    - level: "cost-center"
+      description: "Cost center totals"
+      
+    - level: "business-unit"
+      description: "Business unit totals"
+      
+    - level: "environment"
+      description: "Environment-level costs (dev/staging/prod)"
+
+# ============================================================================
+# REAL-TIME CHARGEBACK ENGINE
+# ============================================================================
+
+chargeback_engine:
+  description: "Real-time cost metering and automated chargeback"
+  
+  metering_pipeline:
+    collection_sources:
+      - source_type: "compute_resources"
+        collection_frequency: "1_minute"
+        granularity: "pod_level"
+        metrics:
+          - "cpu_seconds"
+          - "memory_gb_seconds"
+          - "gpu_seconds"
+        
+      - source_type: "storage_resources"
+        collection_frequency: "1_hour"
+        granularity: "volume_level"
+        metrics:
+          - "storage_gb_hours"
+          - "iops_count"
+          - "throughput_mb"
+        
+      - source_type: "network_resources"
+        collection_frequency: "5_minutes"
+        granularity: "flow_level"
+        metrics:
+          - "ingress_bytes"
+          - "egress_bytes"
+          - "packet_count"
+        
+      - source_type: "external_services"
+        collection_frequency: "real_time"
+        granularity: "api_call_level"
+        metrics:
+          - "api_calls"
+          - "tokens_consumed"
+          - "data_transferred"
+    
+    enrichment_pipeline:
+      - step: "join_resource_tags"
+        source: "resource_metadata_store"
+        
+      - step: "join_namespace_annotations"
+        source: "namespace_metadata_store"
+        
+      - step: "join_cost_center_mapping"
+        source: "finance_system_api"
+        
+      - step: "join_rate_card"
+        source: "pricing_database"
+        
+      - step: "calculate_line_item_cost"
+        formula: "metric_value * rate"
+    
+    cost_calculation:
+      compute:
+        - resource: "cpu_seconds"
+          rate_card: "cpu_rate_per_second_by_instance_type"
+          
+        - resource: "memory_gb_seconds"
+          rate_card: "memory_rate_per_gb_second"
+          
+        - resource: "gpu_seconds"
+          rate_card: "gpu_rate_per_second_by_gpu_type"
+      
+      storage:
+        - resource: "storage_gb_hours"
+          rate_card: "storage_rate_per_gb_hour_by_storage_class"
+          
+        - resource: "iops"
+          rate_card: "iops_rate_per_operation"
+      
+      network:
+        - resource: "egress_gb"
+          rate_card: "network_egress_rate_per_gb_by_destination"
+          
+        - resource: "load_balancer_hours"
+          rate_card: "load_balancer_rate_per_hour"
+  
+  chargeback_mechanism:
+    accumulation:
+      frequency: "real_time"
+      aggregation_levels:
+        - "agent-id"
+        - "project-id"
+        - "cost-center"
+      storage: "cost_accumulation_database"
+      
+    invoicing:
+      frequency: "monthly"
+      invoice_generation: "automated"
+      format: "detailed_line_items_csv_and_json"
+      delivery_method: "finance_system_api_push"
+      reconciliation: "automated_with_source_systems"
+      
+    budget_enforcement:
+      - trigger: "cost_center_spend >= 80%_of_monthly_budget"
+        action: "alert_cost_center_owner"
+        notification: "email_and_slack"
+        
+      - trigger: "cost_center_spend >= 100%_of_monthly_budget"
+        action: "throttle_new_resource_creation"
+        exemptions: ["critical_production_workloads"]
+        
+      - trigger: "cost_center_spend >= 120%_of_monthly_budget"
+        action: "emergency_shutdown_non_critical_resources"
+        approval_required: "cost_center_owner"
+        timeout: "4_hours"
+  
+  showback_reporting:
+    real_time_dashboards:
+      - view: "by_agent"
+        metrics:
+          - "total_cost_today"
+          - "cost_trend_7_days"
+          - "budget_remaining"
+          - "top_cost_drivers"
+        refresh: "1_minute"
+        
+      - view: "by_project"
+        metrics:
+          - "total_cost_month_to_date"
+          - "cost_breakdown_by_resource_type"
+          - "top_consuming_agents"
+          - "cost_variance_vs_budget"
+        refresh: "5_minutes"
+        
+      - view: "by_business_unit"
+        metrics:
+          - "total_cost_month_to_date"
+          - "cost_allocation_by_project"
+          - "cost_trend_vs_previous_month"
+          - "budget_utilization"
+        refresh: "1_hour"
+    
+    automated_reports:
+      - frequency: "daily"
+        recipients: "cost_center_owners"
+        content: "daily_cost_summary_with_anomalies"
+        
+      - frequency: "weekly"
+        recipients: "project_managers"
+        content: "weekly_cost_breakdown_and_trends"
+        
+      - frequency: "monthly"
+        recipients: "finance_team"
+        content: "detailed_invoice_with_reconciliation"
+
+# ============================================================================
+# LICENSE AND API COST TRACKING
+# ============================================================================
+
+license_api_cost_tracking:
+  description: "Attribution of software license and external API costs"
+  
+  tracked_services:
+    # LLM API costs
+    llm_api_provider:
+      metering_method: "api_call_interception_via_proxy"
+      cost_calculation:
+        - metric: "input_tokens"
+          rate: "per_1k_tokens"
+          rate_card: "llm_provider_rate_card"
+          
+        - metric: "output_tokens"
+          rate: "per_1k_tokens"
+          rate_card: "llm_provider_rate_card"
+          
+        - metric: "api_calls"
+          rate: "per_call"
+      
+      attribution:
+        extract_from: "api_request_headers"
+        required_headers:
+          - "X-Agent-ID"
+          - "X-Cost-Center"
+          - "X-Project-ID"
+        fallback: "deny_request_if_headers_missing"
+    
+    # External API services
+    external_api_services:
+      metering_method: "service_mesh_sidecar_tracking"
+      cost_calculation:
+        - metric: "api_calls"
+          rate: "per_call_by_endpoint"
+          
+        - metric: "data_transferred"
+          rate: "per_gb"
+      
+      attribution:
+        extract_from: "service_mesh_metadata"
+        keys:
+          - "source_workload_label.agent-id"
+          - "source_namespace_annotation.cost-center"
+    
+    # Software licenses
+    licensed_software:
+      metering_method: "usage_tracking_via_authentication_logs"
+      cost_calculation:
+        - metric: "concurrent_users"
+          rate: "per_user_per_month"
+          
+        - metric: "feature_usage_hours"
+          rate: "per_feature_per_hour"
+      
+      attribution:
+        extract_from: "authentication_logs"
+        keys:
+          - "user_attribute.agent-id"
+          - "user_attribute.cost-center"
+    
+    # Cloud provider services
+    cloud_services:
+      metering_method: "cloud_provider_billing_api"
+      cost_calculation:
+        - metric: "service_usage"
+          rate: "cloud_provider_rate"
+      
+      attribution:
+        extract_from: "resource_tags"
+        required_tags:
+          - "agent-id"
+          - "cost-center"
+          - "project-id"
+  
+  cost_aggregation:
+    frequency: "hourly"
+    rollup_levels:
+      - "agent-id"
+      - "cost-center"
+      - "project-id"
+    
+  integration:
+    destination: "chargeback_engine"
+    format: "standardized_cost_events"
+    delivery: "real_time_stream"
+
+# ============================================================================
+# IDLE RESOURCE DETECTION AND ATTRIBUTION
+# ============================================================================
+
+idle_resource_attribution:
+  description: "Track and attribute costs of idle/wasted resources"
+  
+  idle_detection_rules:
+    # Compute resources
+    idle_pods:
+      detection_criteria:
+        - metric: "cpu_utilization < 5%"
+          duration: "24_hours"
+          
+        - metric: "memory_utilization < 10%"
+          duration: "24_hours"
+          
+        - metric: "network_bytes_transferred == 0"
+          duration: "12_hours"
+      
+      cost_attribution:
+        charge_as: "waste_cost"
+        attribute_to: "resource_owner_agent"
+        category: "idle_compute"
+        visibility: "cost_center_dashboard"
+      
+      automated_remediation:
+        - condition: "idle_duration > 7_days AND estimated_monthly_cost > $10"
+          action: "notify_owner_and_schedule_deletion"
+          grace_period: "48_hours"
+          
+        - condition: "idle_duration > 30_days"
+          action: "auto_delete_with_notification"
+    
+    # Storage resources
+    idle_volumes:
+      detection_criteria:
+        - metric: "read_ops == 0 AND write_ops == 0"
+          duration: "7_days"
+          
+        - metric: "attached_to_pod == false"
+          duration: "3_days"
+      
+      cost_attribution:
+        charge_as: "waste_cost"
+        attribute_to: "volume_claim_owner_agent"
+        category: "idle_storage"
+      
+      automated_remediation:
+        - condition: "idle_duration > 14_days AND estimated_monthly_cost > $5"
+          action: "snapshot_and_delete_with_notification"
+          grace_period: "72_hours"
+    
+    # Network resources
+    idle_load_balancers:
+      detection_criteria:
+        - metric: "request_count == 0"
+          duration: "48_hours"
+          
+        - metric: "backend_pods_count == 0"
+          duration: "24_hours"
+      
+      cost_attribution:
+        charge_as: "waste_cost"
+        attribute_to: "service_owner_agent"
+        category: "idle_network"
+      
+      automated_remediation:
+        - condition: "idle_duration > 7_days"
+          action: "delete_with_notification"
+          grace_period: "24_hours"
+  
+  waste_reporting:
+    - frequency: "weekly"
+      recipients: "agent_owners"
+      content: "idle_resources_list_with_costs"
+      
+    - frequency: "monthly"
+      recipients: "finance_team"
+      content: "total_waste_by_cost_center_and_trends"
+      
+  waste_reduction_targets:
+    - metric: "waste_cost_percentage"
+      target: "< 5%_of_total_cost"
+      measurement: "monthly"
+
+# ============================================================================
+# COST ATTRIBUTION MEASUREMENT
+# ============================================================================
+
+attribution_metrics:
+  description: "Continuous verification of 100% cost attribution"
+  
+  target: "attribution_completeness == 100%"
+  
+  metrics:
+    overall_attribution:
+      calculation: "attributed_costs / total_costs"
+      target: "== 1.00"
+      tolerance: "< 0.001"  # Less than 0.1% unattributed
+      measurement_frequency: "hourly"
+      
+    compute_attribution:
+      calculation: "attributed_compute_costs / total_compute_costs"
+      target: "== 1.00"
+      
+    storage_attribution:
+      calculation: "attributed_storage_costs / total_storage_costs"
+      target: "== 1.00"
+      
+    network_attribution:
+      calculation: "attributed_network_costs / total_network_costs"
+      target: "== 1.00"
+      
+    license_api_attribution:
+      calculation: "attributed_license_api_costs / total_license_api_costs"
+      target: "== 1.00"
+      
+    shared_resource_attribution:
+      calculation: "attributed_shared_costs / total_shared_costs"
+      target: "== 1.00"
+  
+  validation:
+    # Cross-check against finance system
+    reconciliation:
+      frequency: "monthly"
+      source: "finance_system_general_ledger"
+      method: "automated_three_way_match"
+      tolerance: "< 0.01%"  # Less than 0.01% variance
+      
+    audit_trail:
+      retention: "7_years"
+      format: "immutable_append_only_log"
+      contents:
+        - "all_cost_events"
+        - "all_attribution_decisions"
+        - "all_tag_validations"
+        - "all_reconciliation_results"
+  
+  reporting:
+    - frequency: "daily"
+      recipients: "finance_team"
+      content: "attribution_completeness_dashboard"
+      
+    - frequency: "monthly"
+      recipients: "cost_center_owners"
+      content: "detailed_chargeback_report_with_line_items"
+      format: "csv_and_interactive_dashboard"
+  
+  alerting:
+    - condition: "attribution_completeness < 0.99"
+      action: "investigate_unattributed_costs"
+      severity: "high"
+      escalation: "finance_operations_team"
+      
+    - condition: "reconciliation_variance > 0.01%"
+      action: "audit_cost_attribution_pipeline"
+      severity: "critical"
+      escalation: "finance_director"
+      
+    - condition: "missing_required_tags_detected"
+      action: "block_resource_creation_and_alert"
+      severity: "critical"
+      escalation: "platform_engineering_team"

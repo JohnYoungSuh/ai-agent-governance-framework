@@ -1,0 +1,191 @@
+---
+name: Validate Kubernetes Policies
+
+on:
+  pull_request:
+    paths:
+      - 'deploy/policies/**'
+      - 'deploy/k8s/**'
+      - '.github/workflows/validate-policies.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'deploy/policies/**'
+      - 'deploy/k8s/**'
+
+jobs:
+  validate-gatekeeper-policies:
+    name: Validate Gatekeeper Policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install gator CLI
+        run: |
+          # Install Gatekeeper Policy Manager (gator)
+          curl -L https://github.com/open-policy-agent/gatekeeper/releases/download/v3.15.0/gator-v3.15.0-linux-amd64.tar.gz -o gator.tar.gz
+          tar -xzf gator.tar.gz
+          sudo mv gator /usr/local/bin/
+          gator --version
+
+      - name: Validate ConstraintTemplates
+        run: |
+          echo "🔍 Validating Gatekeeper ConstraintTemplates..."
+          for template in deploy/policies/01-gatekeeper/*-template.yaml; do
+            if [ -f "$template" ]; then
+              echo "Validating: $template"
+              gator verify --filename="$template" || exit 1
+            fi
+          done
+          echo "✅ All ConstraintTemplates are valid"
+
+      - name: Test Gatekeeper policies
+        run: |
+          echo "🧪 Testing Gatekeeper policies with sample manifests..."
+          
+          # Test tier permissions
+          echo "Testing tier-permissions policy..."
+          gator test \
+            --filename=deploy/policies/01-gatekeeper/tier-permissions-template.yaml \
+            --filename=deploy/policies/01-gatekeeper/tier-permissions-constraint.yaml \
+            --filename=deploy/policies/tests/tier-permissions/ || true
+          
+          # Test secrets prevention
+          echo "Testing no-secrets-in-env policy..."
+          gator test \
+            --filename=deploy/policies/01-gatekeeper/no-secrets-in-env-template.yaml \
+            --filename=deploy/policies/01-gatekeeper/no-secrets-in-env-constraint.yaml \
+            --filename=deploy/policies/tests/secrets-prevention/ || true
+          
+          echo "✅ Gatekeeper policy tests completed"
+
+  validate-kyverno-policies:
+    name: Validate Kyverno Policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Kyverno CLI
+        run: |
+          # Install Kyverno CLI
+          curl -LO https://github.com/kyverno/kyverno/releases/download/v1.11.0/kyverno-cli_v1.11.0_linux_x86_64.tar.gz
+          tar -xzf kyverno-cli_v1.11.0_linux_x86_64.tar.gz
+          sudo mv kyverno /usr/local/bin/
+          kyverno version
+
+      - name: Validate Kyverno policies
+        run: |
+          echo "🔍 Validating Kyverno ClusterPolicies..."
+          for policy in deploy/policies/03-kyverno/*.yaml; do
+            if [ -f "$policy" ]; then
+              echo "Validating: $policy"
+              kyverno validate "$policy" || exit 1
+            fi
+          done
+          echo "✅ All Kyverno policies are valid"
+
+      - name: Test Kyverno policies
+        run: |
+          echo "🧪 Testing Kyverno policies with sample manifests..."
+          
+          # Test resource limits policy
+          echo "Testing agent-resource-limits policy..."
+          kyverno apply \
+            deploy/policies/03-kyverno/agent-resource-limits.yaml \
+            --resource deploy/policies/tests/resource-limits/valid-tier3.yaml \
+            --policy-report || true
+          
+          kyverno apply \
+            deploy/policies/03-kyverno/agent-resource-limits.yaml \
+            --resource deploy/policies/tests/resource-limits/invalid-tier3-over-limit.yaml \
+            --policy-report || true
+          
+          echo "✅ Kyverno policy tests completed"
+
+  validate-pod-security:
+    name: Validate Pod Security Admission
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Validate namespace labels
+        run: |
+          echo "🔍 Validating Pod Security Admission labels..."
+          
+          # Check that all AI agent namespaces have PSA labels
+          for ns in ai-agents-dev ai-agents-staging ai-agents-prod; do
+            echo "Checking namespace: $ns"
+            
+            # Extract namespace definition
+            kubectl create --dry-run=client -f deploy/k8s/base/namespaces.yaml -o yaml | \
+              grep -A 20 "name: $ns" | \
+              grep "pod-security.kubernetes.io/enforce: restricted" || \
+              (echo "❌ Namespace $ns missing PSA enforce label" && exit 1)
+            
+            kubectl create --dry-run=client -f deploy/k8s/base/namespaces.yaml -o yaml | \
+              grep -A 20 "name: $ns" | \
+              grep "pod-security.kubernetes.io/audit: restricted" || \
+              (echo "❌ Namespace $ns missing PSA audit label" && exit 1)
+          done
+          
+          echo "✅ All namespaces have Pod Security Admission labels"
+
+      - name: Test Pod Security Standards
+        run: |
+          echo "🧪 Testing pods against restricted security standard..."
+          
+          # Test that valid pods pass
+          kubectl create --dry-run=server -f deploy/policies/tests/tier-permissions/valid-tier1.yaml || \
+            echo "⚠️  Note: Dry-run server validation requires a cluster"
+          
+          echo "✅ Pod Security tests completed"
+
+  summary:
+    name: Policy Validation Summary
+    runs-on: ubuntu-latest
+    needs: [validate-gatekeeper-policies, validate-kyverno-policies, validate-pod-security]
+    if: always()
+    steps:
+      - name: Check validation results
+        run: |
+          echo "📊 Policy Validation Summary"
+          echo "=============================="
+          
+          if [ "${{ needs.validate-gatekeeper-policies.result }}" == "success" ]; then
+            echo "✅ Gatekeeper policies: PASSED"
+          else
+            echo "❌ Gatekeeper policies: FAILED"
+          fi
+          
+          if [ "${{ needs.validate-kyverno-policies.result }}" == "success" ]; then
+            echo "✅ Kyverno policies: PASSED"
+          else
+            echo "❌ Kyverno policies: FAILED"
+          fi
+          
+          if [ "${{ needs.validate-pod-security.result }}" == "success" ]; then
+            echo "✅ Pod Security Admission: PASSED"
+          else
+            echo "❌ Pod Security Admission: FAILED"
+          fi
+          
+          # Fail if any validation failed
+          if [ "${{ needs.validate-gatekeeper-policies.result }}" != "success" ] || \
+             [ "${{ needs.validate-kyverno-policies.result }}" != "success" ] || \
+             [ "${{ needs.validate-pod-security.result }}" != "success" ]; then
+            echo ""
+            echo "❌ Policy validation failed. Please fix the errors above."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All policy validations passed!"

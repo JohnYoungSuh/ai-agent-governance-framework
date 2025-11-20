@@ -1,0 +1,125 @@
+---
+# Model Drift Detection Configuration
+#
+# Configuration for model drift detection per agent.
+# Used by model_drift_detector.py
+
+version: "1.0"
+
+drift_detection:
+  security-agent:
+    # Baseline performance metrics
+    baseline_accuracy: 0.95  # 95% accuracy
+    baseline_precision: 0.93
+    baseline_recall: 0.96
+    
+    # Drift detection thresholds
+    drift_threshold: 0.05  # Alert if accuracy drops >5%
+    window_size: 100  # Last 100 predictions
+    min_samples: 20  # Minimum samples before drift detection
+    
+    # Confidence calibration
+    calibration_threshold: 0.10  # Alert if calibration error >10%
+    
+    # Alert configuration
+    alert_channels:
+      slack: "#ml-alerts"
+      jira_project: "ML"
+      pagerduty_service: "ml-ops"
+    
+    # Actions on drift detection
+    auto_pause_on_drift: false  # Don't auto-pause, just alert
+    require_human_review: true
+    create_jira_ticket: true
+    
+    # Retraining configuration
+    retraining_trigger_threshold: 0.10  # Retrain if drops >10%
+    retraining_data_source: "production_feedback"
+    retraining_approval_required: true
+  
+  it-ops-agent:
+    baseline_accuracy: 0.92
+    baseline_precision: 0.90
+    baseline_recall: 0.94
+    
+    drift_threshold: 0.05
+    window_size: 100
+    min_samples: 20
+    
+    calibration_threshold: 0.10
+    
+    alert_channels:
+      slack: "#ops-alerts"
+      jira_project: "OPS"
+    
+    auto_pause_on_drift: false
+    require_human_review: true
+    create_jira_ticket: true
+    
+    retraining_trigger_threshold: 0.10
+    retraining_data_source: "ops_logs"
+    retraining_approval_required: true
+  
+  ai-agent:
+    baseline_accuracy: 0.88
+    baseline_precision: 0.85
+    baseline_recall: 0.90
+    
+    drift_threshold: 0.05
+    window_size: 150  # Larger window for more variable tasks
+    min_samples: 30
+    
+    calibration_threshold: 0.15  # More lenient for complex tasks
+    
+    alert_channels:
+      slack: "#ai-ml-alerts"
+      jira_project: "AI"
+    
+    auto_pause_on_drift: false
+    require_human_review: true
+    create_jira_ticket: true
+    
+    retraining_trigger_threshold: 0.08
+    retraining_data_source: "user_feedback"
+    retraining_approval_required: true
+  
+  architect-agent:
+    baseline_accuracy: 0.90
+    baseline_precision: 0.88
+    baseline_recall: 0.92
+    
+    drift_threshold: 0.05
+    window_size: 50  # Smaller window (fewer requests)
+    min_samples: 15
+    
+    calibration_threshold: 0.10
+    
+    alert_channels:
+      slack: "#architecture-alerts"
+      jira_project: "ARCH"
+    
+    auto_pause_on_drift: false
+    require_human_review: true
+    create_jira_ticket: true
+    
+    retraining_trigger_threshold: 0.10
+    retraining_data_source: "architect_reviews"
+    retraining_approval_required: true
+
+# Global drift detection settings
+global_settings:
+  # How often to check for drift (seconds)
+  check_interval_seconds: 3600  # Every hour
+  
+  # Drift report retention
+  report_retention_days: 90
+  
+  # Statistical tests
+  statistical_tests:
+    - "accuracy_drop"
+    - "confidence_calibration"
+    - "distribution_shift"
+  
+  # Visualization
+  generate_drift_plots: true
+  plot_output_directory: "/var/log/agent-drift-reports"

@@ -1,0 +1,37 @@
+---
+# VALID: Tier 3 pod with proper resource limits
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-tier3-valid
+  namespace: ai-agents-prod
+  labels:
+    app: test-agent
+    tier: "3"
+    framework-version: "2.1.0"
+  annotations:
+    governance.ai/jira-cr-id: "CR-2025-TEST"
+    governance.ai/cost-center: "engineering"
+spec:
+  serviceAccountName: tier-3-ops-sa
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  containers:
+  - name: agent
+    image: nginx:1.21
+    resources:
+      # CORRECT: Tier 3 defines both requests and limits
+      requests:
+        cpu: 1
+        memory: 2Gi
+        ephemeral-storage: 2Gi
+      limits:
+        cpu: 4
+        memory: 8Gi
+        ephemeral-storage: 5Gi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      readOnlyRootFilesystem: true
