@@ -1,0 +1,108 @@
+---
+# AI Agent Governance Framework - Minimal Edition
+# Version: 3.0-minimal
+#
+# Purpose: Guarantee two business goals with minimum complexity
+# 1. ≥80% autonomous operations (≤20% human approval)
+# 2. 100% cost attribution (zero manual reconciliation)
+
+version: "3.0-minimal"
+
+# ============================================================================
+# APPROVAL AUTOMATION
+# ============================================================================
+
+approval:
+  description: "Risk-based automated approval system"
+  
+  # Risk scoring (simplified to 3 factors)
+  risk_factors:
+    - name: "blast_radius"
+      weight: 0.5
+      description: "Number of resources affected"
+      thresholds:
+        low: "< 10 resources"
+        high: ">= 10 resources"
+      scores:
+        low: 10
+        high: 90
+    
+    - name: "reversible"
+      weight: 0.3
+      description: "Can action be automatically undone"
+      values:
+        yes: 10
+        no: 90
+    
+    - name: "cost_impact"
+      weight: 0.2
+      description: "Estimated cost delta"
+      thresholds:
+        low: "< $100"
+        high: ">= $100"
+      scores:
+        low: 10
+        high: 90
+  
+  # Decision threshold
+  auto_approve_threshold: 30  # Score < 30 = auto-approve
+  
+  # Pre-approved actions (always auto-approve, no risk calculation needed)
+  pre_approved_actions:
+    - "restart_pod"
+    - "scale_within_limits"
+    - "renew_certificate"
+    - "rotate_logs"
+    - "update_configmap"
+    - "rolling_restart"
+
+# ============================================================================
+# COST ATTRIBUTION
+# ============================================================================
+
+cost_attribution:
+  description: "Mandatory tagging and cost tracking"
+  
+  # Required tags (enforced at admission control)
+  required_tags:
+    - key: "cost-center"
+      pattern: "^CC-[0-9]{4}$"
+      example: "CC-1234"
+      
+    - key: "agent-id"
+      pattern: "^[a-z0-9-]+$"
+      example: "security-agent"
+  
+  # Cost metering
+  metering:
+    interval: "1_hour"
+    metrics:
+      - "cpu_seconds"
+      - "memory_gb_seconds"
+      - "storage_gb_hours"
+  
+  # Rate card (example rates)
+  rates:
+    cpu_per_second: 0.00005
+    memory_per_gb_second: 0.00001
+    storage_per_gb_hour: 0.0001
+  
+  # Invoicing
+  invoicing:
+    frequency: "monthly"
+    format: "csv"
+
+# ============================================================================
+# METRICS
+# ============================================================================
+
+metrics:
+  # Autonomy target
+  autonomy:
+    target: 0.80  # 80% auto-approved
+    formula: "auto_approved_actions / total_actions"
+  
+  # Cost attribution target
+  attribution:
+    target: 1.00  # 100% attributed
+    formula: "attributed_costs / total_costs"
