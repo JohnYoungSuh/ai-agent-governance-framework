@@ -1,0 +1,37 @@
+{
+  "$schema": "https://governance.example.com/schemas/policy-request-v3.json",
+  "description": "Example request for testing governance policy evaluation",
+
+  "agent_identity": "team-alpha-deployment-agent-001",
+  "namespace": "team-alpha",
+  "environment": "production",
+  "policy_version": "3.0.0",
+
+  "operation": "create",
+  "command": "kubectl apply -f deployment.yaml -n team-alpha",
+  "resource_type": "deployment",
+  "affected_resources": [
+    "deployment/myapp"
+  ],
+
+  "current_cpu_usage": 12,
+  "declared_cpu_quota": 16,
+  "current_memory_usage": 24,
+  "declared_memory_quota": 32,
+  "current_storage_usage": 50,
+  "declared_storage_quota": 100,
+
+  "budget_limit_usd": 500.0,
+  "current_spending_usd": 420.0,
+
+  "resource_tags": {
+    "agent_identity": "team-alpha-deployment-agent-001",
+    "cost_center": "CC-1234",
+    "project_code": "PROJ-5678",
+    "environment": "production",
+    "owner": "team-alpha@example.com"
+  },
+
+  "justification": "Deploying new version of application to production",
+  "timestamp": "2025-11-21T12:00:00Z"
+}

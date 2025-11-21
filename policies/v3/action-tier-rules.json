@@ -1,0 +1,498 @@
+{
+  "$schema": "https://governance.example.com/schemas/action-tier-rules-v3.json",
+  "version": "3.0.0",
+  "last_updated": "2025-11-21T12:00:00Z",
+  "description": "Action tier classification rules for AI agent governance",
+  "default_tier": 2,
+  "evaluation_order": "first-match",
+
+  "rules": [
+    {
+      "rule_id": "tier0-read-own-namespace",
+      "tier": 0,
+      "category": "read_operations",
+      "description": "Read operations in own namespace",
+      "patterns": [
+        "^(get|list|describe|show|cat|head|tail|grep|find) .* --namespace=%namespace%$",
+        "^kubectl get .* -n %namespace%$",
+        "^ls .* ~/projects/%namespace%/.*$"
+      ],
+      "conditions": [],
+      "approval_mode": "auto_approve",
+      "logging_level": "info",
+      "examples": [
+        "kubectl get pods --namespace=team-alpha",
+        "kubectl describe service myapp -n team-alpha",
+        "ls ~/projects/team-alpha/logs/"
+      ]
+    },
+
+    {
+      "rule_id": "tier0-status-checks",
+      "tier": 0,
+      "category": "monitoring",
+      "description": "Status checks and health monitoring",
+      "patterns": [
+        "^(status|health|version|info|uptime) .*$",
+        "^curl .*/health.*$",
+        "^curl .*/ready.*$"
+      ],
+      "conditions": [],
+      "approval_mode": "auto_approve",
+      "logging_level": "debug",
+      "examples": [
+        "kubectl get componentstatuses",
+        "curl http://myapp:8080/health"
+      ]
+    },
+
+    {
+      "rule_id": "tier1-write-own-namespace",
+      "tier": 1,
+      "category": "write_operations",
+      "description": "Write operations in own namespace within quota",
+      "patterns": [
+        "^(create|apply|patch|update|write|touch|mkdir) .* --namespace=%namespace%$",
+        "^kubectl apply -f .* -n %namespace%$",
+        "^echo .* > ~/projects/%namespace%/.*$"
+      ],
+      "conditions": [
+        {
+          "type": "resource_quota_check",
+          "operator": "pass",
+          "description": "Ensure within declared quotas"
+        },
+        {
+          "type": "cost_attribution_tags",
+          "operator": "present",
+          "required_tags": ["agent_identity", "cost_center", "project_code"],
+          "description": "All resources must have cost attribution tags"
+        }
+      ],
+      "approval_mode": "auto_approve_with_audit",
+      "logging_level": "info",
+      "audit_retention_days": 365,
+      "examples": [
+        "kubectl apply -f deployment.yaml -n team-alpha",
+        "mkdir ~/projects/team-alpha/new-directory"
+      ]
+    },
+
+    {
+      "rule_id": "tier1-delete-pods-small-blast-radius",
+      "tier": 1,
+      "category": "deletion_operations",
+      "description": "Delete small number of pods in own namespace",
+      "patterns": [
+        "^kubectl delete pod .* --namespace=%namespace%$"
+      ],
+      "conditions": [
+        {
+          "type": "blast_radius",
+          "operator": "<=",
+          "value": 5,
+          "unit": "pods",
+          "description": "Only allow deletion of up to 5 pods at once"
+        },
+        {
+          "type": "pod_status",
+          "operator": "in",
+          "allowed_values": ["Failed", "Completed", "Unknown"],
+          "description": "Only delete pods in terminal or failed state"
+        }
+      ],
+      "approval_mode": "auto_approve_with_audit",
+      "logging_level": "warn",
+      "examples": [
+        "kubectl delete pod myapp-abc123 --namespace=team-alpha"
+      ]
+    },
+
+    {
+      "rule_id": "tier1-scale-within-quota",
+      "tier": 1,
+      "category": "scaling_operations",
+      "description": "Scale deployments within quota limits",
+      "patterns": [
+        "^kubectl scale .* --replicas=([0-9]+) --namespace=%namespace%$"
+      ],
+      "conditions": [
+        {
+          "type": "resource_quota_check",
+          "operator": "pass",
+          "description": "Scaling must stay within quota"
+        },
+        {
+          "type": "replica_count",
+          "operator": "<=",
+          "value": 10,
+          "description": "Maximum 10 replicas without approval"
+        }
+      ],
+      "approval_mode": "auto_approve_with_audit",
+      "logging_level": "info",
+      "examples": [
+        "kubectl scale deployment myapp --replicas=5 --namespace=team-alpha"
+      ]
+    },
+
+    {
+      "rule_id": "tier1-create-temp-files",
+      "tier": 1,
+      "category": "filesystem_operations",
+      "description": "Create temporary files in approved locations",
+      "patterns": [
+        "^(touch|echo|cat|tee) .* (>/dev/null|> ?/tmp/%namespace%-.*|> ?~/projects/%namespace%/\\.tmp/.*)$"
+      ],
+      "conditions": [
+        {
+          "type": "file_size",
+          "operator": "<",
+          "value": 100,
+          "unit": "MB",
+          "description": "Temp files under 100MB auto-approved"
+        }
+      ],
+      "approval_mode": "auto_approve_with_audit",
+      "logging_level": "debug",
+      "examples": [
+        "echo 'test' > /tmp/team-alpha-scratch.txt"
+      ]
+    },
+
+    {
+      "rule_id": "tier2-budget-overage",
+      "tier": 2,
+      "category": "cost_governance",
+      "description": "Operations that would exceed budget",
+      "patterns": [
+        ".*"
+      ],
+      "conditions": [
+        {
+          "type": "budget_remaining",
+          "operator": "<",
+          "value": 0,
+          "unit": "USD",
+          "description": "Budget exceeded"
+        }
+      ],
+      "approval_mode": "human_required",
+      "approval_routing": "finops_team",
+      "sla_hours": 4,
+      "timeout_action": "deny",
+      "logging_level": "warn",
+      "escalation_template": "budget_overage"
+    },
+
+    {
+      "rule_id": "tier2-cross-namespace-read",
+      "tier": 2,
+      "category": "cross_namespace",
+      "description": "Read operations in other namespaces",
+      "patterns": [
+        "^(get|list|describe) .* --namespace=(?!%namespace%).*$",
+        "^kubectl get .* -n (?!%namespace%).*$"
+      ],
+      "conditions": [],
+      "approval_mode": "human_required",
+      "approval_routing": "namespace_owner",
+      "sla_hours": 4,
+      "timeout_action": "deny",
+      "logging_level": "warn",
+      "escalation_template": "cross_namespace_access"
+    },
+
+    {
+      "rule_id": "tier2-cross-namespace-write",
+      "tier": 2,
+      "category": "cross_namespace",
+      "description": "Write operations in other namespaces",
+      "patterns": [
+        "^(create|apply|patch|update|delete) .* --namespace=(?!%namespace%).*$"
+      ],
+      "conditions": [],
+      "approval_mode": "human_required",
+      "approval_routing": ["namespace_owner", "governance_team"],
+      "sla_hours": 8,
+      "timeout_action": "deny",
+      "logging_level": "error",
+      "escalation_template": "cross_namespace_write"
+    },
+
+    {
+      "rule_id": "tier2-privilege-escalation",
+      "tier": 2,
+      "category": "security",
+      "description": "Privilege escalation attempts",
+      "patterns": [
+        ".*(sudo|su -|chmod \\+s|setuid|setgid).*"
+      ],
+      "conditions": [],
+      "approval_mode": "human_required",
+      "approval_routing": "security_team",
+      "sla_hours": 2,
+      "timeout_action": "deny",
+      "logging_level": "error",
+      "escalation_template": "privilege_escalation",
+      "alert_security_team": true
+    },
+
+    {
+      "rule_id": "tier2-production-data-delete",
+      "tier": 2,
+      "category": "data_operations",
+      "description": "Delete data in production environment",
+      "patterns": [
+        "^(delete|drop|truncate|remove) .* (database|table|collection|bucket|volume).*"
+      ],
+      "conditions": [
+        {
+          "type": "environment",
+          "operator": "==",
+          "value": "production"
+        }
+      ],
+      "approval_mode": "human_required",
+      "approval_routing": "data_owner",
+      "sla_hours": 8,
+      "timeout_action": "deny",
+      "logging_level": "error",
+      "requires_simulation": true,
+      "requires_rollback_plan": true,
+      "escalation_template": "production_data_deletion"
+    },
+
+    {
+      "rule_id": "tier2-large-file-deletion",
+      "tier": 2,
+      "category": "filesystem_operations",
+      "description": "Delete large number of files or large total size",
+      "patterns": [
+        "^(rm|delete) .*"
+      ],
+      "conditions": [
+        {
+          "type": "file_count",
+          "operator": ">",
+          "value": 100,
+          "description": "More than 100 files"
+        },
+        {
+          "type": "or"
+        },
+        {
+          "type": "total_size",
+          "operator": ">",
+          "value": 1,
+          "unit": "GB"
+        }
+      ],
+      "approval_mode": "human_required",
+      "approval_routing": "data_owner",
+      "sla_hours": 4,
+      "logging_level": "warn",
+      "requires_simulation": true
+    },
+
+    {
+      "rule_id": "tier2-network-policy-changes",
+      "tier": 2,
+      "category": "security",
+      "description": "Modify network policies or firewall rules",
+      "patterns": [
+        "^kubectl (apply|create|patch|delete) .* (networkpolicy|ingress|egress).*"
+      ],
+      "conditions": [],
+      "approval_mode": "human_required",
+      "approval_routing": "security_team",
+      "sla_hours": 4,
+      "timeout_action": "deny",
+      "logging_level": "warn",
+      "requires_simulation": true
+    },
+
+    {
+      "rule_id": "tier3-credential-exposure",
+      "tier": 3,
+      "category": "security_violation",
+      "description": "Attempting to expose credentials or secrets",
+      "patterns": [
+        ".*(echo|cat|print|printf|console\\.log|System\\.out).*(password|api_key|secret|token|credential).*",
+        ".*(password|api_key|secret|token).*>(.*\\.log|.*\\.txt|stdout|stderr).*"
+      ],
+      "conditions": [],
+      "approval_mode": "always_deny",
+      "logging_level": "critical",
+      "action": "deny_and_alert",
+      "alert_security_team": true,
+      "incident_severity": "high",
+      "automatic_response": "terminate_agent"
+    },
+
+    {
+      "rule_id": "tier3-audit-log-modification",
+      "tier": 3,
+      "category": "security_violation",
+      "description": "Attempting to modify or delete audit logs",
+      "patterns": [
+        ".*(rm|delete|truncate|modify|edit|vi|nano).*(audit|log|trail).*",
+        ".*> ?/var/log/.*"
+      ],
+      "conditions": [],
+      "approval_mode": "always_deny",
+      "logging_level": "critical",
+      "action": "deny_and_alert",
+      "alert_security_team": true,
+      "alert_governance_team": true,
+      "incident_severity": "critical",
+      "automatic_response": "terminate_agent"
+    },
+
+    {
+      "rule_id": "tier3-policy-bypass",
+      "tier": 3,
+      "category": "governance_violation",
+      "description": "Attempting to bypass governance policies",
+      "patterns": [
+        ".*(skip|bypass|disable|ignore).*(policy|governance|validation|check|gate).*",
+        ".*--skip-validation.*",
+        ".*--no-verify.*",
+        ".*--force.*policy.*"
+      ],
+      "conditions": [],
+      "approval_mode": "always_deny",
+      "logging_level": "critical",
+      "action": "deny_and_alert",
+      "alert_governance_team": true,
+      "incident_severity": "high",
+      "automatic_response": "terminate_agent"
+    },
+
+    {
+      "rule_id": "tier3-root-deletion",
+      "tier": 3,
+      "category": "security_violation",
+      "description": "Root filesystem deletion or destructive wildcards",
+      "patterns": [
+        "^rm -rf /$",
+        "^rm -rf /\\*$",
+        "^rm -rf \\*$",
+        "^chmod 777 -R /$"
+      ],
+      "conditions": [],
+      "approval_mode": "always_deny",
+      "logging_level": "critical",
+      "action": "deny_and_alert",
+      "alert_security_team": true,
+      "incident_severity": "critical",
+      "automatic_response": "terminate_agent"
+    },
+
+    {
+      "rule_id": "tier3-identity-delegation",
+      "tier": 3,
+      "category": "security_violation",
+      "description": "Attempting to delegate or share identity",
+      "patterns": [
+        ".*(copy|share|export|transfer).*(identity|credential|token|certificate|key).*"
+      ],
+      "conditions": [],
+      "approval_mode": "always_deny",
+      "logging_level": "critical",
+      "action": "deny_and_alert",
+      "alert_security_team": true,
+      "incident_severity": "critical",
+      "automatic_response": "revoke_identity"
+    },
+
+    {
+      "rule_id": "tier3-cost-allocation-manipulation",
+      "tier": 3,
+      "category": "governance_violation",
+      "description": "Attempting to manually manipulate cost allocation",
+      "patterns": [
+        ".*(modify|change|update|delete).*(cost_center|project_code|chargeback).*tag.*",
+        ".*untag.*cost.*"
+      ],
+      "conditions": [],
+      "approval_mode": "always_deny",
+      "logging_level": "critical",
+      "action": "deny_and_alert",
+      "alert_finops_team": true,
+      "alert_governance_team": true,
+      "incident_severity": "high"
+    }
+  ],
+
+  "condition_evaluators": {
+    "resource_quota_check": {
+      "description": "Verify current consumption vs declared quotas",
+      "implementation": "policy_engine.check_quota(agent_identity, requested_resources)"
+    },
+    "cost_attribution_tags": {
+      "description": "Verify required tags present on resources",
+      "implementation": "policy_engine.validate_tags(resource, required_tags)"
+    },
+    "blast_radius": {
+      "description": "Estimate number of affected resources",
+      "implementation": "policy_engine.calculate_blast_radius(operation, resources)"
+    },
+    "budget_remaining": {
+      "description": "Calculate remaining budget",
+      "implementation": "attribution_engine.get_budget_remaining(agent_identity)"
+    },
+    "environment": {
+      "description": "Determine environment from manifest",
+      "implementation": "manifest.metadata.labels.environment"
+    },
+    "pod_status": {
+      "description": "Check pod current status",
+      "implementation": "kubectl get pod <name> -o jsonpath='{.status.phase}'"
+    },
+    "replica_count": {
+      "description": "Target replica count from scale command",
+      "implementation": "parse_command_for_replica_count(command)"
+    },
+    "file_count": {
+      "description": "Count files affected by operation",
+      "implementation": "count_files_matching_pattern(file_pattern)"
+    },
+    "file_size": {
+      "description": "Total size of files affected",
+      "implementation": "sum_file_sizes(file_list)"
+    },
+    "total_size": {
+      "description": "Total size calculation",
+      "implementation": "calculate_total_size(resources)"
+    }
+  },
+
+  "escalation_templates": {
+    "budget_overage": {
+      "title": "Budget Overage Approval Required",
+      "routing": "finops_team",
+      "required_fields": ["agent_identity", "current_budget", "requested_amount", "justification"]
+    },
+    "cross_namespace_access": {
+      "title": "Cross-Namespace Access Request",
+      "routing": "namespace_owner",
+      "required_fields": ["source_namespace", "target_namespace", "operation", "justification"]
+    },
+    "cross_namespace_write": {
+      "title": "Cross-Namespace Write Request",
+      "routing": ["namespace_owner", "governance_team"],
+      "required_fields": ["source_namespace", "target_namespace", "operation", "affected_resources", "justification", "rollback_plan"]
+    },
+    "privilege_escalation": {
+      "title": "Privilege Escalation Request",
+      "routing": "security_team",
+      "required_fields": ["agent_identity", "current_privileges", "requested_privileges", "justification", "duration"]
+    },
+    "production_data_deletion": {
+      "title": "Production Data Deletion Request",
+      "routing": "data_owner",
+      "required_fields": ["affected_resources", "blast_radius", "justification", "rollback_plan", "simulation_results"]
+    }
+  }
+}

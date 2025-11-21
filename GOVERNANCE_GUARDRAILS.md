@@ -187,4 +187,148 @@ CI/CD pipelines must automatically enforce governance at build and deploy stages
 
 ---
 
+## 17. Deployment Patterns & Anti-Patterns (Day 7 Learning)
+**Added:** 2025-11-21 | **Source:** AI Ops Substrate Day 7 Full Stack Integration
+
+### ✅ Required Deployment Patterns
+
+#### Pattern 1: Fail Fast with Explicit Error Handling
+```bash
+set -euo pipefail  # Exit on error, undefined vars, pipe failures
+```
+**Rationale:** Prevents cascading failures and provides clear failure points for debugging.
+
+**Anti-Pattern:** ❌ Silent failures that cause cryptic downstream errors.
+
+---
+
+#### Pattern 2: Dependency Ordering with Wait Conditions
+```bash
+# CORRECT: Wait for dependencies before deploying dependents
+kubectl apply -f certificate.yaml
+kubectl wait --for=condition=ready certificate/ai-ops-agent-cert --timeout=120s
+kubectl apply -f deployment.yaml  # Now safe to mount the cert secret
+```
+
+**Rationale:** Prevents race conditions where pods try to mount secrets/configmaps that don't exist yet.
+
+**Anti-Pattern:** ❌ Deploying all resources simultaneously and hoping Kubernetes figures it out:
+```bash
+kubectl apply -f .  # Race conditions galore!
+```
+
+---
+
+#### Pattern 3: Bottom-Up Architecture (Foundation First)
+```
+Deployment Order:
+1. Infrastructure (Kubernetes, networking)
+2. Foundation Layer (DNS, PKI, secrets management)
+3. Platform Services (cert-manager, monitoring)
+4. Application Layer (AI Ops Agent, LLM services)
+```
+
+**Rationale:** Each layer provides services to the layer above. Building top-down requires constant rework.
+
+**Anti-Pattern:** ❌ Deploying applications first, then retrofitting infrastructure:
+- Leads to self-signed certs that need replacement
+- Manual secret management that needs automation
+- Service discovery issues that need DNS fixes
+
+---
+
+#### Pattern 4: Defensive Prerequisite Validation
+```bash
+# Check dependencies exist before proceeding
+if ! kubectl get clusterissuer vault-issuer &>/dev/null; then
+    echo "ERROR: cert-manager not deployed"
+    echo "Run: cd foundation/cert-manager && ./deploy.sh"
+    exit 1
+fi
+```
+
+**Rationale:** Provides actionable error messages instead of cryptic failures.
+
+**Anti-Pattern:** ❌ Assume dependencies exist, fail with unclear errors.
+
+---
+
+#### Pattern 5: FQDN for Cross-Namespace Communication
+```yaml
+# CORRECT: Use FQDN for reliable service discovery
+VAULT_ADDR: "http://vault.vault.svc.cluster.local:8200"
+#                    └─┬──┘ └──┬─┘ └─┬┘ └──────┬───────┘
+#                  service  ns   type   cluster domain
+```
+
+**Rationale:**
+- Works across namespaces
+- Explicit and unambiguous
+- DNS resolution handled by CoreDNS
+
+**Anti-Pattern:** ❌ Using short names that only work within the same namespace:
+```yaml
+VAULT_ADDR: "http://vault:8200"  # Fails from other namespaces!
+```
+
+---
+
+### 🔒 Security Patterns
+
+#### Pattern 6: Certificate Automation via cert-manager
+```yaml
+# Let cert-manager handle cert lifecycle
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ai-ops-agent-cert
+spec:
+  secretName: ai-ops-agent-tls
+  issuerRef:
+    name: vault-issuer
+  duration: 720h
+  renewBefore: 240h  # Auto-renewal 10 days before expiry
+```
+
+**Rationale:**
+- Automatic issuance and renewal
+- Centralized PKI management via Vault
+- No manual certificate operations
+
+**Anti-Pattern:** ❌ Manual certificate generation and distribution.
+
+---
+
+### 📊 Audit & Compliance Patterns
+
+#### Pattern 7: Structured Logging with Context
+```bash
+log_info() {
+    echo "[$(date -Iseconds)] [INFO] [namespace=$NAMESPACE] $1" | tee -a audit.log
+}
+```
+
+**Rationale:**
+- Timestamps for incident timelines
+- Namespace context for multi-tenant environments
+- Persistent audit trail
+
+**Anti-Pattern:** ❌ Unstructured echo statements with no context or persistence.
+
+---
+
+### 🎯 Lessons Learned Summary
+
+| Lesson | Impact | Governance Rule |
+|--------|--------|-----------------|
+| Foundation-first architecture | Prevents rework | Section 17, Pattern 3 |
+| Wait for dependencies | Prevents race conditions | Section 17, Pattern 2 |
+| FQDN for service discovery | Cross-namespace reliability | Section 17, Pattern 5 |
+| Automated certificate management | Reduces operational overhead | Section 17, Pattern 6 |
+| Defensive validation | Clear error messages | Section 17, Pattern 4 |
+
+**Enforcement:** CI/CD pipelines must validate these patterns before deployment.
+
+---
+
 **End of Document**

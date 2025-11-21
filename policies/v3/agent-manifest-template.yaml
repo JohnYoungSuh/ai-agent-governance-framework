@@ -1,0 +1,271 @@
+# AI Agent Manifest Template - Governance Framework v3.0
+# This is the required structure for every AI agent deployment
+# Fill in all fields marked with <...> placeholders
+
+apiVersion: governance.ai/v3
+kind: AgentManifest
+
+metadata:
+  name: <agent-name>  # Unique identifier, DNS-compatible
+  namespace: <team-namespace>  # e.g., team-alpha, data-engineering
+  labels:
+    cost_center: "<CC-XXXX>"  # Business cost center code
+    project_code: "<PROJ-XXXX>"  # Project tracking code
+    environment: <dev|staging|production>
+    owner_team: "<team-name>"
+    compliance_tier: "<tier1|tier2|tier3>"  # Based on data sensitivity
+
+spec:
+  # ============================================
+  # SECTION 1: Policy Attestation (REQUIRED)
+  # ============================================
+  compliance:
+    framework_version: "3.0.0"
+    policy_id: "unified-governance-v3"
+    policy_hash: "sha256:<compute-from-framework-document>"
+    registry_url: "https://governance.example.com/registry/v3"
+    last_validated: "<YYYY-MM-DDTHH:MM:SSZ>"
+
+  # ============================================
+  # SECTION 2: Identity & Purpose (REQUIRED)
+  # ============================================
+  identity:
+    agent_identity: "<namespace>-<agent-name>-<instance>"  # Must be globally unique
+    purpose: "<One sentence describing business purpose>"
+    owner: "<owner-email@example.com>"
+    owner_team: "<team-name>"
+    on_call_contact: "https://oncall.example.com/<team-name>"
+    slack_channel: "#<team-channel>"
+
+  # ============================================
+  # SECTION 3: Autonomy Target (REQUIRED)
+  # ============================================
+  autonomy:
+    target_auto_approval_rate: 0.80  # Minimum 80% for production
+    measurement_window_days: 7
+    alert_threshold: 0.75  # Alert if drops below 75%
+    critical_threshold: 0.70  # Mandatory redesign if below 70%
+
+  # ============================================
+  # SECTION 4: Resource Quotas (REQUIRED)
+  # ============================================
+  resource_quotas:
+    compute:
+      cpu_cores: <number>  # e.g., 4
+      memory_gb: <number>  # e.g., 16
+      gpu_count: <number>  # e.g., 0 (if no GPU needed)
+      ephemeral_storage_gb: <number>  # e.g., 20
+
+    storage:
+      persistent_gb: <number>  # e.g., 100
+      backup_gb: <number>  # e.g., 50
+
+    network:
+      egress_gb_per_month: <number>  # e.g., 1000
+      ingress_gb_per_month: <number>  # e.g., 100
+
+    api_calls:
+      llm_calls_per_hour: <number>  # e.g., 100 (for OpenAI/Anthropic/etc.)
+      llm_calls_per_day: <number>  # e.g., 2000
+      external_api_calls_per_day: <number>  # e.g., 10000
+      database_queries_per_minute: <number>  # e.g., 1000
+
+  # ============================================
+  # SECTION 5: Budget (REQUIRED)
+  # ============================================
+  budget:
+    monthly_limit_usd: <amount>  # e.g., 500.00
+    daily_limit_usd: <amount>  # e.g., 20.00
+    alert_at_percent: 80  # Alert at 80% utilization
+    block_at_percent: 100  # Block at 100%
+    overage_approval_tier: 2  # Tier 2 approval for overages
+
+  # ============================================
+  # SECTION 6: Declared Privileges (REQUIRED)
+  # ============================================
+  privileges:
+    # Namespaces this agent can operate in
+    namespaces:
+      - <primary-namespace>  # Always include own namespace
+      # - <additional-namespace>  # Only if cross-namespace access needed
+
+    # Kubernetes/Container operations (if applicable)
+    kubernetes_operations:
+      - "read:pods"
+      - "read:services"
+      - "read:deployments"
+      - "create:pods"
+      - "update:pods"
+      - "delete:pods"
+      # - "read:secrets/<secret-name>"  # Specific secrets only
+
+    # Filesystem operations
+    filesystem_operations:
+      - "read:/home/<user>/projects/<namespace>/**"
+      - "write:/home/<user>/projects/<namespace>/**"
+      # - "read:/tmp/<namespace>-*"
+
+    # External APIs (whitelist)
+    external_apis:
+      - "https://api.github.com"
+      - "https://api.openai.com"
+      - "https://api.anthropic.com"
+      # Add other approved external services
+
+    # Database access (if applicable)
+    database_access:
+      - database: "<db-name>"
+        operations: ["SELECT", "INSERT", "UPDATE"]
+        tables: ["<table1>", "<table2>"]
+        # Never include DELETE or DROP without explicit approval
+
+    # Secret access (specific secret names)
+    secrets_access:
+      - "db-credentials"
+      - "api-keys-<service>"
+      # Never use wildcard "*" for secrets
+
+  # ============================================
+  # SECTION 7: Action Tier Overrides (OPTIONAL)
+  # Use this to customize tier classification for specific patterns
+  # ============================================
+  action_overrides:
+    # Example: Allow pod deletion without escalation in this namespace
+    - pattern: "kubectl delete pod .* --namespace=<namespace>"
+      default_tier: 1
+      override_tier: 0
+      justification: "Routine cleanup operation in isolated namespace"
+      conditions:
+        - "pod_age_hours > 24"
+        - "pod_status == Failed"
+
+    # Example: Always escalate production database writes
+    - pattern: "INSERT INTO production\\..*"
+      default_tier: 1
+      override_tier: 2
+      justification: "Production data modification requires approval"
+
+  # ============================================
+  # SECTION 8: Escalation Routing (REQUIRED)
+  # ============================================
+  escalation:
+    # Budget-related escalations
+    budget_issues:
+      - type: slack
+        channel: "#<team>-budget-alerts"
+      - type: email
+        recipients:
+          - "<budget-owner@example.com>"
+          - "<team-lead@example.com>"
+
+    # Security-related escalations
+    security_issues:
+      - type: slack
+        channel: "#security-ops"
+        mention: "@security-oncall"
+      - type: pagerduty
+        service_key: "<P5SECURITY>"
+
+    # Operational escalations
+    operational_issues:
+      - type: slack
+        channel: "#<team>-oncall"
+      - type: pagerduty
+        service_key: "<P5-TEAM-ONCALL>"
+
+    # Compliance/policy escalations
+    policy_issues:
+      - type: slack
+        channel: "#governance-team"
+      - type: email
+        recipients:
+          - "governance-team@example.com"
+
+  # ============================================
+  # SECTION 9: Audit Configuration (REQUIRED)
+  # ============================================
+  audit:
+    log_level: "info"  # debug|info|warn|error
+    retention_days: 365
+    log_destination: "s3://governance-logs/<namespace>/"
+    structured_format: "json"
+
+    # Fields to mask in logs (PII, secrets)
+    sensitive_fields_to_mask:
+      - "password"
+      - "api_key"
+      - "secret"
+      - "token"
+      - "credential"
+      - "ssn"
+      - "credit_card"
+
+    # Additional context to include in every log entry
+    additional_context:
+      business_unit: "<BU-name>"
+      data_classification: "<public|internal|confidential|restricted>"
+
+  # ============================================
+  # SECTION 10: Lifecycle & Deployment (REQUIRED)
+  # ============================================
+  lifecycle:
+    deployment_method: "gitops"  # gitops|terraform|helm
+    source_repository: "https://github.com/<org>/<repo>"
+    deployment_branch: "main"
+    auto_rollback_enabled: true
+    health_check_endpoint: "/health"
+    readiness_check_endpoint: "/ready"
+
+    # Drift detection
+    drift_detection:
+      enabled: true
+      check_interval_minutes: 15
+      auto_remediate_tier_0: true
+      auto_remediate_tier_1: false  # Escalate Tier 1 drift
+
+  # ============================================
+  # SECTION 11: Dependencies (OPTIONAL)
+  # ============================================
+  dependencies:
+    # Other agents this agent depends on
+    agents:
+      - name: "<dependency-agent-name>"
+        namespace: "<dependency-namespace>"
+        required: true
+
+    # External services
+    services:
+      - name: "vault"
+        endpoint: "http://vault.vault.svc.cluster.local:8200"
+        required: true
+      - name: "postgres"
+        endpoint: "postgres.database.svc.cluster.local:5432"
+        required: true
+
+  # ============================================
+  # SECTION 12: Simulation & Testing (REQUIRED)
+  # ============================================
+  simulation:
+    dry_run_enabled_by_default: true
+    simulation_environment: "staging"  # Where to run simulations
+    destructive_operations_always_simulate: true
+
+  # ============================================
+  # SECTION 13: Custom Tags (OPTIONAL)
+  # ============================================
+  custom_tags:
+    deployment_date: "<YYYY-MM-DD>"
+    version: "<semantic-version>"
+    # Add any additional metadata for your organization
+
+# ============================================
+# SIGNATURE & ATTESTATION
+# ============================================
+signature:
+  # Cryptographic signature of this manifest
+  # Generated by: sha256sum agent-manifest.yaml | sign-with-key
+  algorithm: "RSA-SHA256"
+  public_key_id: "<key-id>"
+  signature_value: "<base64-encoded-signature>"
+  signed_by: "<human-operator-email>"
+  signed_at: "<YYYY-MM-DDTHH:MM:SSZ>"

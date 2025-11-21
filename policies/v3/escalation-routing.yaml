@@ -1,0 +1,526 @@
+# Escalation Routing Configuration - Governance Framework v3.0
+# Defines how Tier 2 escalations are routed to human approvers
+# and notification channels for different types of escalations
+
+apiVersion: governance.ai/v3
+kind: EscalationRoutingConfig
+
+metadata:
+  name: default-escalation-routing
+  version: "3.0.0"
+  last_updated: "2025-11-21T12:00:00Z"
+
+spec:
+  # =============================================================================
+  # ROUTING RULES
+  # Each rule matches a condition and routes to specific destinations
+  # =============================================================================
+
+  routing_rules:
+    # Budget & Cost Escalations
+    - name: budget-overage
+      priority: high
+      condition:
+        tier: 2
+        trigger_type: budget_exceeded
+        expression: "budget_remaining < 0"
+
+      destinations:
+        - type: slack
+          channel: "#finops-alerts"
+          mention: "@finops-oncall"
+          message_template: |
+            :rotating_light: **Budget Overage Alert**
+
+            **Agent:** `{{.agent_identity}}`
+            **Namespace:** `{{.namespace}}`
+            **Budget Status:**
+            - Monthly Limit: ${{.budget_limit_usd}}
+            - Current Spending: ${{.current_spending_usd}}
+            - Remaining: ${{.budget_remaining_usd}}
+
+            **Requested Action:** {{.operation}}
+            **Estimated Cost:** ${{.estimated_cost_usd}}
+
+            **Justification:** {{.justification}}
+
+            **Action Required:** {{.approval_url}}
+            **Deadline:** {{.sla_deadline}}
+
+        - type: email
+          recipients:
+            - "finops-team@example.com"
+            - "{{.budget_owner}}"
+            - "{{.agent_owner}}"
+          subject: "[ACTION REQUIRED] Budget Approval: {{.agent_identity}}"
+          body_template: "email_templates/budget_approval.html"
+
+        - type: servicenow
+          assignment_group: "FinOps"
+          priority: 3
+          category: "Budget Management"
+          short_description: "Budget approval required for {{.agent_identity}}"
+
+      sla:
+        response_time_hours: 4
+        escalate_after_hours: 6
+        escalate_to:
+          - "finops-manager@example.com"
+          - slack: "#finops-leadership"
+
+      timeout_action: deny
+      denial_message: "Budget approval timed out - request denied per policy"
+
+    # Security Escalations
+    - name: security-escalation
+      priority: critical
+      condition:
+        tier: 2
+        trigger_type: security_concern
+        expression: "regex.match('.*(sudo|privilege|credential|secret).*', operation)"
+
+      destinations:
+        - type: slack
+          channel: "#security-ops"
+          mention: "@security-oncall"
+          message_template: |
+            :shield: **Security Escalation**
+
+            **Agent:** `{{.agent_identity}}`
+            **Concern:** {{.security_concern_type}}
+            **Risk Level:** {{.risk_level}}
+
+            **Command:** ```{{.command}}```
+
+            **Context:**
+            - Namespace: {{.namespace}}
+            - Environment: {{.environment}}
+            - Current Privileges: {{.current_privileges}}
+            - Requested Privileges: {{.requested_privileges}}
+
+            **Justification:** {{.justification}}
+
+            **Approve:** {{.approval_url}}
+            **Deny:** {{.denial_url}}
+            **Deadline:** {{.sla_deadline}}
+
+        - type: pagerduty
+          service_key: "{{.pagerduty_service_key_security}}"
+          severity: "warning"
+          dedup_key: "security-{{.agent_identity}}-{{.timestamp}}"
+          details:
+            agent: "{{.agent_identity}}"
+            command: "{{.command}}"
+            risk_level: "{{.risk_level}}"
+
+        - type: email
+          recipients:
+            - "security-team@example.com"
+            - "{{.namespace_owner}}"
+          subject: "[SECURITY] Privilege Escalation Request: {{.agent_identity}}"
+
+      sla:
+        response_time_hours: 2
+        escalate_after_hours: 4
+        escalate_to:
+          - "security-manager@example.com"
+          - slack: "#security-leadership"
+          - pagerduty: "{{.pagerduty_service_key_security_manager}}"
+
+      timeout_action: deny
+      automatic_incident: true
+      incident_severity: "SEV-3"
+
+    # Cross-Namespace Read Access
+    - name: cross-namespace-read
+      priority: medium
+      condition:
+        tier: 2
+        trigger_type: cross_namespace
+        expression: "target_namespace != agent_namespace AND operation in ['get', 'list', 'describe']"
+
+      destinations:
+        - type: slack
+          channel: "#namespace-{{.target_namespace}}"
+          message_template: |
+            :mailbox: **Cross-Namespace Access Request**
+
+            **Requesting Agent:** `{{.agent_identity}}` (from namespace `{{.agent_namespace}}`)
+            **Target Namespace:** `{{.target_namespace}}`
+            **Operation:** Read-only ({{.operation}})
+            **Resources:** {{.affected_resources}}
+
+            **Justification:** {{.justification}}
+            **Duration:** {{.access_duration}}
+
+            **Approve:** {{.approval_url}}
+            **Deny:** {{.denial_url}}
+
+        - type: email
+          recipients:
+            - "{{.target_namespace_owner}}"
+            - "governance-team@example.com"
+          subject: "Cross-Namespace Read Access Request: {{.agent_identity}}"
+
+      sla:
+        response_time_hours: 4
+        escalate_after_hours: 8
+        escalate_to:
+          - "governance-team@example.com"
+
+      timeout_action: deny
+
+    # Cross-Namespace Write Access
+    - name: cross-namespace-write
+      priority: high
+      condition:
+        tier: 2
+        trigger_type: cross_namespace
+        expression: "target_namespace != agent_namespace AND operation in ['create', 'update', 'delete', 'apply', 'patch']"
+
+      destinations:
+        - type: slack
+          channel: "#namespace-{{.target_namespace}}"
+          mention: "@{{.target_namespace}}-oncall"
+          message_template: |
+            :warning: **Cross-Namespace Write Request**
+
+            **Requesting Agent:** `{{.agent_identity}}` (from `{{.agent_namespace}}`)
+            **Target Namespace:** `{{.target_namespace}}`
+            **Operation:** **WRITE** ({{.operation}})
+            **Resources:** {{.affected_resources}}
+            **Blast Radius:** {{.blast_radius_estimate}}
+
+            **Justification:** {{.justification}}
+            **Rollback Plan:** {{.rollback_procedure}}
+
+            **Requires approval from:**
+            - Namespace Owner
+            - Governance Team
+
+            **Approve:** {{.approval_url}}
+            **Deny:** {{.denial_url}}
+
+        - type: email
+          recipients:
+            - "{{.target_namespace_owner}}"
+            - "governance-team@example.com"
+            - "{{.agent_owner}}"
+          subject: "[REVIEW REQUIRED] Cross-Namespace Write: {{.agent_identity}}"
+
+        - type: servicenow
+          assignment_group: "Governance"
+          priority: 2
+          category: "Access Control"
+
+      sla:
+        response_time_hours: 8
+        escalate_after_hours: 12
+        escalate_to:
+          - "governance-manager@example.com"
+          - slack: "#governance-leadership"
+
+      timeout_action: deny
+      requires_multi_approval: true
+      minimum_approvers: 2
+
+    # Production Data Deletion
+    - name: production-data-deletion
+      priority: critical
+      condition:
+        tier: 2
+        trigger_type: data_operation
+        expression: "operation in ['delete', 'drop', 'truncate'] AND environment == 'production'"
+
+      destinations:
+        - type: slack
+          channel: "#data-ops"
+          mention: "@data-oncall @dba-oncall"
+          message_template: |
+            :fire: **PRODUCTION DATA DELETION REQUEST**
+
+            **Agent:** `{{.agent_identity}}`
+            **Operation:** {{.operation}}
+            **Environment:** PRODUCTION
+
+            **Affected Resources:**
+            {{range .affected_resources}}
+            - {{.}}
+            {{end}}
+
+            **Blast Radius:** {{.blast_radius_estimate}}
+            - Rows: ~{{.estimated_row_count}}
+            - Size: ~{{.estimated_size_gb}} GB
+
+            **Justification:** {{.justification}}
+
+            **Rollback Plan:** {{.rollback_procedure}}
+
+            **:warning: SIMULATION REQUIRED BEFORE APPROVAL**
+            **Simulation Results:** {{.simulation_url}}
+
+            **Approve:** {{.approval_url}}
+            **Deny:** {{.denial_url}}
+            **Deadline:** {{.sla_deadline}}
+
+        - type: email
+          recipients:
+            - "data-ops@example.com"
+            - "dba-team@example.com"
+            - "{{.data_owner}}"
+            - "{{.namespace_owner}}"
+          subject: "[CRITICAL] Production Data Deletion Approval: {{.agent_identity}}"
+
+        - type: servicenow
+          assignment_group: "Data Operations"
+          priority: 1
+          category: "Data Management"
+          impact: "High"
+          urgency: "High"
+
+      sla:
+        response_time_hours: 8
+        escalate_after_hours: 12
+        escalate_to:
+          - "vp-engineering@example.com"
+          - "cto@example.com"
+
+      timeout_action: deny
+      requires_simulation: true
+      requires_multi_approval: true
+      minimum_approvers: 2
+      required_approver_roles:
+        - "data_owner"
+        - "dba_team"
+
+    # Network Policy Changes
+    - name: network-policy-change
+      priority: high
+      condition:
+        tier: 2
+        trigger_type: infrastructure_change
+        expression: "regex.match('.*(networkpolicy|ingress|egress|firewall).*', resource_type)"
+
+      destinations:
+        - type: slack
+          channel: "#network-ops"
+          mention: "@network-oncall"
+          message_template: |
+            :globe_with_meridians: **Network Policy Change Request**
+
+            **Agent:** `{{.agent_identity}}`
+            **Change Type:** {{.operation}} {{.resource_type}}
+            **Namespace:** {{.namespace}}
+
+            **Current Policy:** {{.current_policy}}
+            **Proposed Policy:** {{.proposed_policy}}
+            **Diff:** {{.policy_diff_url}}
+
+            **Impact Assessment:**
+            - Affected Services: {{.affected_services}}
+            - Traffic Impact: {{.traffic_impact}}
+            - Security Implications: {{.security_review}}
+
+            **Justification:** {{.justification}}
+
+            **Approve:** {{.approval_url}}
+            **Deny:** {{.denial_url}}
+
+        - type: email
+          recipients:
+            - "network-team@example.com"
+            - "security-team@example.com"
+          subject: "Network Policy Change Request: {{.agent_identity}}"
+
+      sla:
+        response_time_hours: 4
+        escalate_after_hours: 8
+        escalate_to:
+          - "network-manager@example.com"
+
+      timeout_action: deny
+      requires_simulation: true
+
+    # Tier 3 Denial Alert (not for approval, just notification)
+    - name: tier-3-denial-alert
+      priority: critical
+      condition:
+        tier: 3
+
+      destinations:
+        - type: slack
+          channel: "#governance-incidents"
+          mention: "@governance-oncall"
+          message_template: |
+            :octagonal_sign: **POLICY VIOLATION - Action Denied**
+
+            **Agent:** `{{.agent_identity}}`
+            **Violation Type:** Tier 3 - Always Deny
+            **Attempted Action:** ```{{.command}}```
+
+            **Violation Details:** {{.violation_description}}
+            **Risk Level:** CRITICAL
+
+            **Incident ID:** {{.incident_id}}
+            **Timestamp:** {{.timestamp}}
+
+            **Automatic Actions Taken:**
+            {{range .automatic_actions}}
+            - {{.}}
+            {{end}}
+
+            **Review:** {{.incident_url}}
+
+        - type: servicenow
+          assignment_group: "Governance"
+          priority: 1
+          category: "Policy Violation"
+          impact: "High"
+          urgency: "High"
+
+        - type: email
+          recipients:
+            - "governance-team@example.com"
+            - "security-team@example.com"
+            - "{{.agent_owner}}"
+          subject: "[CRITICAL] Policy Violation: {{.agent_identity}}"
+
+      action: deny_and_log
+      automatic_incident: true
+      incident_severity: "SEV-2"
+
+  # =============================================================================
+  # DEFAULT ROUTING (fallback for unmatched escalations)
+  # =============================================================================
+
+  default_routing:
+    destinations:
+      - type: slack
+        channel: "#governance-general"
+        message_template: |
+          :question: **Unclassified Escalation**
+
+          **Agent:** `{{.agent_identity}}`
+          **Operation:** {{.operation}}
+          **Tier:** {{.tier}}
+
+          **Details:** {{.details}}
+
+          **Approve:** {{.approval_url}}
+          **Deny:** {{.denial_url}}
+
+      - type: email
+        recipients:
+          - "governance-team@example.com"
+        subject: "Governance Escalation: {{.agent_identity}}"
+
+    sla:
+      response_time_hours: 24
+
+  # =============================================================================
+  # TIMEOUT BEHAVIOR
+  # =============================================================================
+
+  timeout_behavior:
+    tier_2: "auto_deny"  # NEVER auto-approve on timeout
+    tier_3: "deny"  # Already denied, just ensure logged
+
+    timeout_notification:
+      - type: slack
+        channel: "#governance-timeouts"
+        message_template: |
+          :alarm_clock: **Escalation Timeout**
+
+          **Agent:** `{{.agent_identity}}`
+          **Escalation ID:** {{.escalation_id}}
+          **Requested:** {{.requested_at}}
+          **Timed Out:** {{.timeout_at}}
+          **SLA:** {{.sla_hours}} hours
+
+          **Action Taken:** Automatically denied per policy
+
+          **Original Request:** {{.request_summary}}
+
+  # =============================================================================
+  # NOTIFICATION PREFERENCES
+  # =============================================================================
+
+  notification_preferences:
+    # Aggregate similar requests within time window
+    aggregate_similar_requests: true
+    aggregation_window_minutes: 10
+
+    # Rate limiting to prevent notification floods
+    max_notifications_per_hour: 50
+    max_notifications_per_agent_per_day: 100
+
+    # Quiet hours (notifications delayed unless critical)
+    quiet_hours:
+      enabled: false
+      timezone: "America/Los_Angeles"
+      start_time: "22:00"
+      end_time: "08:00"
+      critical_overrides: true  # Critical alerts sent regardless
+
+    # Notification formatting
+    timestamp_format: "2006-01-02T15:04:05Z07:00"
+    use_emoji: true
+    markdown_enabled: true
+
+  # =============================================================================
+  # APPROVAL WORKFLOW SETTINGS
+  # =============================================================================
+
+  approval_workflow:
+    # Allow approvers to delegate approvals
+    delegation_enabled: true
+    delegation_audit_required: true
+
+    # Approval expiration
+    approval_expires_after_hours: 168  # 7 days
+
+    # Approval audit
+    audit_all_approvals: true
+    audit_destination: "s3://governance-logs/approvals/"
+
+    # Auto-approval for repeat requests
+    auto_approve_repeated_requests:
+      enabled: true
+      requires_previous_approvals: 3
+      within_days: 30
+      same_operation: true
+      same_resources: true
+
+  # =============================================================================
+  # INTEGRATION ENDPOINTS
+  # =============================================================================
+
+  integrations:
+    slack:
+      webhook_url: "{{.SLACK_WEBHOOK_URL}}"  # From secret
+      bot_token: "{{.SLACK_BOT_TOKEN}}"  # From secret
+
+    pagerduty:
+      api_key: "{{.PAGERDUTY_API_KEY}}"  # From secret
+
+    servicenow:
+      instance_url: "https://{{.SERVICENOW_INSTANCE}}.service-now.com"
+      username: "{{.SERVICENOW_USER}}"  # From secret
+      password: "{{.SERVICENOW_PASSWORD}}"  # From secret
+
+    email:
+      smtp_host: "smtp.example.com"
+      smtp_port: 587
+      from_address: "governance@example.com"
+      username: "{{.SMTP_USERNAME}}"  # From secret
+      password: "{{.SMTP_PASSWORD}}"  # From secret
+
+  # =============================================================================
+  # MESSAGE TEMPLATES
+  # =============================================================================
+
+  message_templates:
+    approval_url_format: "https://governance.example.com/approve/{{.escalation_id}}"
+    denial_url_format: "https://governance.example.com/deny/{{.escalation_id}}"
+    incident_url_format: "https://governance.example.com/incidents/{{.incident_id}}"
+    simulation_url_format: "https://governance.example.com/simulations/{{.simulation_id}}"
