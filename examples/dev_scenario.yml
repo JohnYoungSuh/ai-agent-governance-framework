@@ -1,0 +1,24 @@
+---
+# examples/dev_scenario.yml
+- name: Development Workflow with Governance
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    # URL of the Governance Service (mock or real)
+    governance_url: "http://localhost:8080"
+    
+  tasks:
+    - name: Request Permission to Enable Debug Mode
+      include_tasks: ../tasks/ask_governance.yml
+      vars:
+        service_name: "payment-gateway"
+        action: "enable_debug_mode"
+        governance_context:
+          environment: "dev"
+          ticket_id: "JIRA-1234"
+          reason: "Investigating transaction latency"
+
+    - name: Enable Debug Mode
+      debug:
+        msg: "Permission granted! Enabling debug mode on payment-gateway..."

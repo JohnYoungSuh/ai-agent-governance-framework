@@ -1,0 +1,24 @@
+---
+# examples/sec_scenario.yml
+- name: Security Workflow with Governance
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    governance_url: "http://localhost:8080"
+
+  tasks:
+    - name: Request Permission to Update Firewall Rules
+      include_tasks: ../tasks/ask_governance.yml
+      vars:
+        service_name: "firewall-controller"
+        action: "update_rules"
+        governance_context:
+          environment: "prod"
+          change_control_id: "CHG-9999"
+          risk_level: "high"
+          rule_hash: "a1b2c3d4e5f6"
+
+    - name: Apply Firewall Rules
+      debug:
+        msg: "Permission granted! Applying new firewall rules..."

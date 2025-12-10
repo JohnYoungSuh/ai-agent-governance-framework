@@ -1,0 +1,53 @@
+---
+# tasks/ask_governance.yml
+# Description: This task file implements the "Permission-First" workflow.
+# It queries the Governance Service before allowing any action to proceed.
+
+- name: Set Governance Service URL
+  set_fact:
+    governance_url: "{{ governance_url | default('http://localhost:8080') }}"
+
+- name: Ask Governance for Permission
+  uri:
+    url: "{{ governance_url }}/api/v1/ask"
+    method: POST
+    body_format: json
+    body:
+      service_name: "{{ service_name }}"
+      action: "{{ action | default('execute') }}"
+      context: "{{ governance_context | default({}) }}"
+      requester: "{{ ansible_user_id | default('unknown') }}"
+    status_code: [200, 202]
+    return_content: yes
+  register: governance_response
+  # Don't fail immediately on connection error to allow for fallback/mocking in dev, 
+  # but in strict mode this should fail.
+  ignore_errors: "{{ governance_ignore_errors | default(false) }}"
+
+- name: Handle Connection Failure (Optional)
+  fail:
+    msg: "Could not contact Governance Service at {{ governance_url }}"
+  when: governance_response.failed and not (governance_ignore_errors | default(false))
+
+- name: Debug Governance Response
+  debug:
+    var: governance_response.json
+  when: governance_debug | default(false)
+
+- name: Enforce Governance Decision
+  block:
+    - name: Check for Denial
+      fail:
+        msg: "Governance DENIED permission: {{ governance_response.json.reason | default('No reason provided') }}"
+      when: 
+        - governance_response.json is defined
+        - governance_response.json.decision == 'DENY'
+
+    - name: Handle Manual Review
+      pause:
+        prompt: "Governance requires MANUAL REVIEW. Please approve task {{ governance_response.json.task_id }} via the dashboard and press Enter to continue."
+      when: 
+        - governance_response.json is defined
+        - governance_response.json.decision == 'MANUAL_REVIEW'
+
+  when: not governance_response.failed

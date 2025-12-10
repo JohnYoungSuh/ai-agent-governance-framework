@@ -53,6 +53,12 @@ Version 2.1 introduces enterprise-grade compliance, production deployment option
 ### Core Framework
 - **[Workflow Framework](docs/PAR-WORKFLOW-FRAMEWORK.md)** - Enhanced PAR cycle with security gates
 - **[Governance & Policy](docs/GOVERNANCE-POLICY.md)** - Security, compliance, and ethical guidelines
+- **[Unified AI Agent Governance Framework v3.0](UNIFIED-AI-AGENT-GOVERNANCE-FRAMEWORK-v3.0.md)** ⭐ - Complete framework specification (SINGLE SOURCE OF TRUTH)
+
+### Governance Kernel (Patent Pending) ⭐ **NEW**
+- **[US Patent Application](docs/US-PATENT-APPLICATION.md)** ⭐ - Full USPTO-compliant utility patent application draft.
+- **[Patent Technical Disclosure](docs/PATENT-DISCLOSURE.md)** ⭐ - The authoritative technical specification for the Atomic Governance Transaction system.
+- *[DEPRECATED] GPIS Requirements & Gap Analysis* - See `docs/` for historical reference.
 
 ### Architecture & Deployment (NEW in v2.1)
 - **[Kubernetes Deployment Guide](docs/KUBERNETES-DEPLOYMENT-GUIDE.md)** ⭐ - Complete K8s deployment with Helm charts and monitoring
