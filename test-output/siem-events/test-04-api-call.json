@@ -1,6 +1,6 @@
 {
   "siem_event_id": "audit-test-004",
-  "timestamp": "2025-10-18T17:28:25.523145+00:00",
+  "timestamp": "2026-06-19T14:18:19.499966+00:00",
   "source": "agent-runtime",
   "control_id": "APP-001",
   "agent_id": "architect-agent",

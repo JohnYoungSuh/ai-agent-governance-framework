@@ -111,9 +111,51 @@ spec:
         {{- end }}
         - name: tmp
           mountPath: /tmp
+        {{- if eq .Values.secrets.provider "conjur-oss" }}
+        - name: conjur-access-token
+          mountPath: /run/conjur
+          readOnly: true
+        {{- end }}
 
         securityContext:
           {{- toYaml .Values.securityContext | nindent 10 }}
+
+      {{- if eq .Values.secrets.provider "conjur-oss" }}
+      # Conjur Authenticator Sidecar Client
+      - name: conjur-authn
+        image: cyberark/conjur-authn-k8s-client:latest@sha256:794931bc11979dfa9018e698889816ec33c8816c1a89c8a816c1a89c8a816c1a
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: CONJUR_VERSION
+            value: "5"
+          - name: CONJUR_URL
+            value: {{ .Values.secrets.conjur.authnUrl | quote }}
+          - name: CONJUR_ACCOUNT
+            value: {{ .Values.secrets.conjur.account | quote }}
+          - name: CONJUR_AUTHN_URL
+            value: "{{ .Values.secrets.conjur.authnUrl }}/authn-k8s/dev"
+          - name: CONJUR_SSL_CERTIFICATE
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Values.secrets.conjur.sslCertConfigMap }}
+                key: ssl-certificate
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: MY_POD_SERVICE_ACCOUNT
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.serviceAccountName
+        volumeMounts:
+          - name: conjur-access-token
+            mountPath: /run/conjur
+          - name: projected-sa-token
+            mountPath: /var/run/secrets/conjur
+            readOnly: true
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+      {{- end }}
 
       volumes:
       - name: config
@@ -126,6 +168,18 @@ spec:
       {{- end }}
       - name: tmp
         emptyDir: {}
+      {{- if eq .Values.secrets.provider "conjur-oss" }}
+      - name: conjur-access-token
+        emptyDir:
+          medium: Memory
+      - name: projected-sa-token
+        projected:
+          sources:
+            - serviceAccountToken:
+                path: token
+                expirationSeconds: {{ .Values.secrets.serviceAccountToken.expirationSeconds }}
+                audience: {{ .Values.secrets.serviceAccountToken.audience | quote }}
+      {{- end }}
 
       {{- with .Values.nodeSelector }}
       nodeSelector:

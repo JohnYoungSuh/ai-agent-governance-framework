@@ -1,0 +1,31 @@
+{
+  "agent_types": {
+    "RG": {
+      "name": "Revenue-Generating",
+      "description": "Directly drives top-line revenue (e.g., Trading Bot, Dynamic Pricing).",
+      "default_downtime_cost_per_hour": 50000.0,
+      "risk_profile": "High",
+      "opportunity_cost_required": true
+    },
+    "RS": {
+      "name": "Revenue-Supporting",
+      "description": "Enhances efficiency or reduces churn (e.g., Customer Support Agent).",
+      "default_downtime_cost_per_hour": 5000.0,
+      "risk_profile": "Medium",
+      "opportunity_cost_required": false
+    },
+    "OC": {
+      "name": "Operational Cost",
+      "description": "Internal automation, non-critical (e.g., Log Summarizer).",
+      "default_downtime_cost_per_hour": 100.0,
+      "risk_profile": "Low",
+      "opportunity_cost_required": false
+    }
+  },
+  "financial_constants": {
+    "baseline_labor_rate_per_hour": 150.0,
+    "friction_guardrail_percent": 10.0,
+    "insurance_premium_base_rate": 0.05,
+    "capital_cost_of_money": 0.07
+  }
+}

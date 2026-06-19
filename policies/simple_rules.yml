@@ -1,0 +1,199 @@
+# Simple Rules for AI Agent Governance Framework
+# These rules execute WITHOUT calling the LLM (0 tokens!)
+# Based on YOUR 16 guardrail rules and 4 agent tiers
+
+# Format: "CATEGORY:SUBCATEGORY:RISK_LEVEL"
+
+# ============================================================================
+# TIER 1 RULES (Read-Only Assistant)
+# ============================================================================
+
+ACCESS:logs:low:
+  decision: ALLOW
+  reason: "Tier 1 can read logs within own namespace (Guardrail #1)"
+  policies: [audit-trail, namespace-isolation]
+  guardrails: ["1", "6"]
+  conditions:
+    - "namespace == agent.allowed_namespace"
+    - "agent_tier >= tier1"
+
+ACCESS:config:low:
+  decision: ALLOW
+  reason: "Tier 1 can read config files (non-sensitive) (Guardrail #1)"
+  policies: [audit-trail]
+  guardrails: ["1", "6"]
+  conditions:
+    - "namespace == agent.allowed_namespace"
+    - "no PII or secrets in config"
+
+ACCESS:secrets:critical:
+  decision: DENY
+  reason: "Secrets access requires human approval (Guardrail #8)"
+  policies: [secrets-management, need-to-know]
+  guardrails: ["8", "10"]
+  escalate: true
+
+ACCESS:credentials:critical:
+  decision: DENY
+  reason: "Credential access requires approval (Guardrail #8)"
+  policies: [secrets-management]
+  guardrails: ["8", "10"]
+  escalate: true
+
+# ============================================================================
+# TIER 2 RULES (Supervised Executor)
+# ============================================================================
+
+CREATE:temp_directory:low:
+  decision: ALLOW
+  reason: "Tier 2+ can create temp directories in namespace (Guardrail #4)"
+  policies: [file-system-rules, namespace-isolation]
+  guardrails: ["1", "4"]
+  conditions:
+    - "namespace in [dev, staging]"
+    - "path contains /tmp/ or /temp/"
+    - "agent_tier >= tier2"
+
+MODIFY:config_file:medium:
+  decision: ALLOW
+  reason: "Tier 2+ can modify configs with confirmation (Guardrail #2)"
+  policies: [change-management, backup-required]
+  guardrails: ["2", "4", "6"]
+  requires_confirmation: true
+  conditions:
+    - "namespace != production"
+    - "backup_exists == true"
+    - "agent_tier >= tier2"
+
+DELETE:temp_files:low:
+  decision: ALLOW
+  reason: "Tier 2+ can delete temp files with confirmation (Guardrail #2, #4)"
+  policies: [deletion-safeguards, file-system-rules]
+  guardrails: ["2", "4"]
+  requires_confirmation: true
+  conditions:
+    - "path contains /tmp/ or /temp/"
+    - "namespace != production"
+    - "agent_tier >= tier2"
+
+# ============================================================================
+# TIER 3 RULES (Orchestrator - Semi-Autonomous)
+# ============================================================================
+
+CREATE:kubernetes_deployment:medium:
+  decision: ALLOW
+  reason: "Tier 3+ can create K8s deployments in dev/staging (Guardrail #11)"
+  policies: [resource-limits, namespace-isolation, orchestration]
+  guardrails: ["1", "3", "11", "14"]
+  conditions:
+    - "namespace in [dev, staging]"
+    - "resource_quota_ok == true"
+    - "agent_tier >= tier3"
+    - "has labels [app, env, owner]"
+
+CREATE:kubernetes_service:medium:
+  decision: ALLOW
+  reason: "Tier 3+ can create K8s services (non-LoadBalancer) (Guardrail #11)"
+  policies: [resource-limits, cost-controls]
+  guardrails: ["1", "11"]
+  conditions:
+    - "namespace in [dev, staging]"
+    - "service_type != LoadBalancer"
+    - "agent_tier >= tier3"
+
+MODIFY:kubernetes_config:medium:
+  decision: ALLOW
+  reason: "Tier 3+ can modify K8s configs in dev/staging (Guardrail #2)"
+  policies: [change-management, orchestration]
+  guardrails: ["2", "3", "6"]
+  requires_confirmation: true
+  simulation_required: true
+  conditions:
+    - "namespace in [dev, staging]"
+    - "agent_tier >= tier3"
+
+# ============================================================================
+# TIER 4 RULES (Autonomous - Full Authority)
+# ============================================================================
+
+CREATE:infrastructure:high:
+  decision: ALLOW
+  reason: "Tier 4 can create infrastructure in dev (Guardrail #11)"
+  policies: [resource-limits, cost-controls]
+  guardrails: ["11", "14"]
+  requires_confirmation: true
+  simulation_required: true
+  conditions:
+    - "namespace == dev"
+    - "cost_estimate < 100 USD"
+    - "agent_tier == tier4"
+
+# ============================================================================
+# PRODUCTION RULES (All Tiers)
+# ============================================================================
+
+DELETE:production:critical:
+  decision: DENY
+  reason: "Production DELETE requires human approval (Guardrail #2, #10)"
+  policies: [production-protection, deletion-safeguards, multi-approval]
+  guardrails: ["2", "10", "12"]
+  escalate: true
+  simulation_required: true
+
+MODIFY:production:high:
+  decision: DENY
+  reason: "Production MODIFY requires human approval (Guardrail #2, #10)"
+  policies: [production-protection, change-management]
+  guardrails: ["2", "10", "15"]
+  escalate: true
+  simulation_required: true
+
+CREATE:production_loadbalancer:critical:
+  decision: DENY
+  reason: "Production LoadBalancer requires approval (cost control)"
+  policies: [cost-controls, production-protection]
+  guardrails: ["11"]
+  escalate: true
+
+# ============================================================================
+# COMPLIANCE RULES (All Tiers - Always Allow)
+# ============================================================================
+
+COMPLY:audit_report:low:
+  decision: ALLOW
+  reason: "Compliance queries are read-only (Guardrail #6)"
+  policies: [audit-trail, compliance-reporting]
+  guardrails: ["6", "9", "16"]
+  conditions:
+    - "read_only_operation == true"
+
+COMPLY:policy_validation:low:
+  decision: ALLOW
+  reason: "Policy validation allowed for all tiers (Guardrail #9)"
+  policies: [policy-versioning]
+  guardrails: ["9"]
+
+# ============================================================================
+# VIOLATION PATTERNS (Always Deny)
+# ============================================================================
+
+ANY:namespace_violation:critical:
+  decision: DENY
+  reason: "Agent operating outside namespace (Guardrail #1 VIOLATION)"
+  policies: [namespace-isolation]
+  guardrails: ["1"]
+  escalate: true
+
+ANY:tier_violation:critical:
+  decision: DENY
+  reason: "Agent tier insufficient for operation"
+  policies: [tier-enforcement]
+  guardrails: ["tier_system"]
+  escalate: true
+
+ANY:policy_hash_mismatch:critical:
+  decision: DENY
+  reason: "Policy hash mismatch - potential tampering (Guardrail #9)"
+  policies: [policy-versioning]
+  guardrails: ["9"]
+  escalate: true

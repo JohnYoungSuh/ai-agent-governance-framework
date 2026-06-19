@@ -21,6 +21,9 @@ maintainers:
 
 dependencies: []
 
+kubeVersion: ">= 1.27.0-0"
+
 annotations:
   framework.ai-governance/version: "2.1.0"
   framework.ai-governance/tier-support: "1,2,3,4"
+  k3s-compatible: "true"

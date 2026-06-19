@@ -1,0 +1,229 @@
+# K3s Dev Values — AI Agent Governance Framework
+# Target: K3s home cluster (home-cluster-devsecops) with Traefik ingress
+# CNI: flannel (default K3s) — L4 NetworkPolicy only (no FQDN filtering)
+# Storage: local-path (default K3s)
+# LLM: Direct API (NOT FedRAMP — dev only)
+#
+# Usage:
+#   helm upgrade --install ai-agent deploy/helm/ai-agent \
+#     -f deploy/helm/ai-agent/values-k3s.yaml \
+#     -n ai-agents-dev
+
+global:
+  environment: dev
+  namespace: ai-agents-dev
+  clusterType: k3s
+
+# ─── Image Registry ───────────────────────────────────────────────────────
+image:
+  registry: ""             # Empty = use local images / k3s local registry
+  pullPolicy: IfNotPresent
+  tag: dev
+
+# ─── Ingress (K3s Traefik default) ───────────────────────────────────────
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: "ai-agents-dev-auth@kubernetescrd"
+
+# ─── GPIS (Policy Decision Point) ────────────────────────────────────────
+gpis:
+  replicas: 1              # No HA needed in dev
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  service:
+    port: 8000
+  env:
+    LOG_LEVEL: DEBUG
+    GPIS_ENV: dev
+
+# ─── Agent Resources (reduced for K3s single/2-node) ────────────────────
+agents:
+  security:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+    tier: 2
+    port: 8080
+
+  it_ops:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+    tier: 3
+    port: 8080
+
+  ai:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    tier: 2
+    port: 8080
+
+  architect:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+    tier: 4
+    port: 8080
+
+# ─── Security Context (all pods) ─────────────────────────────────────────
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534         # nobody
+  fsGroup: 65534
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  runAsNonRoot: true
+  runAsUser: 65534
+
+# ─── Memory Tier: Redis (HITL checkpoint + budget counters) ──────────────
+redis:
+  enabled: true
+  replicas: 1              # Single pod — dev acceptable
+  image: "redis:7.2-alpine@sha256:placeholder"   # Pin to digest before prod use
+  port: 6379
+  storageClass: local-path
+  storageSize: 1Gi
+  securityContext:
+    runAsUser: 1000        # Redis default uid
+    fsGroup: 2000          # Allows writes to local-path PVC without root
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false  # Redis needs /data writable
+    allowPrivilegeEscalation: false
+  config:
+    # AOF persistence — survives K3s node reboot, preserves agent Chain of Thought
+    appendonly: "yes"
+    appendfsync: "everysec"   # Balance durability vs performance
+    maxmemory: "256mb"
+    maxmemory-policy: "allkeys-lru"
+    # Lock key pattern: agent_lock:{agent_id} — prevents concurrent task collision
+    # Budget key: {agent_id}:tokens:rolling_24h — TTL 86400s
+  persistence:
+    enabled: true         # AOF requires persistence
+    mountPath: /data
+
+# ─── Memory Tier: Chroma VectorDB (semantic memory) ──────────────────────
+chroma:
+  enabled: true
+  mode: embedded          # In-process for K3s dev — no separate pod
+  # Collection isolation: one collection per agent_id
+  # collection naming: collection_{agent_id}
+  storageClass: local-path
+  storageSize: 2Gi
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 2000
+
+# ─── Identity / Secrets (Conjur OSS for K3s dev) ─────────────────────────
+secrets:
+  provider: conjur-oss    # conjur-oss | aws-irsa
+  conjur:
+    authnUrl: "https://conjur.ai-agents-infra.svc.cluster.local/authn-k8s/dev"
+    account: "dev"
+    sslCertConfigMap: "conjur-cert"
+  # automountServiceAccountToken: false — explicit volume projection only
+  serviceAccountToken:
+    expirationSeconds: 900   # 15min — matches Tier 1 JWT TTL
+    audience: "conjur"
+
+# ─── LLM Provider (Dev — Direct API, NOT FedRAMP) ────────────────────────
+llm:
+  provider: direct-api    # Standard public endpoints — dev only
+  smallModel:
+    provider: google
+    model: gemini-2.5-flash
+    # API key via Conjur, never env var
+  largeModel:
+    provider: anthropic
+    model: claude-sonnet-4-5
+    # API key via Conjur, never env var
+  proxy:
+    enabled: false        # No LLM proxy in dev — direct calls
+  budgetWarningPct: 80
+  budgetSuspendPct: 95
+
+# ─── NetworkPolicy ────────────────────────────────────────────────────────
+networkPolicy:
+  enabled: true
+  cni: flannel            # K3s default — L4 only (no FQDN)
+  # CRITICAL: Allow ingress from kube-system (Traefik) namespace
+  # Without this, K3s Traefik cannot reach agent pods
+  allowFromNamespaces:
+    - kube-system         # Traefik ingress controller
+    - observability       # Prometheus scrape
+  denyAllDefault: true
+  egressTiers:
+    t1:                   # Internal vault tier
+      - redis.ai-agents-dev.svc.cluster.local:6379
+      - chroma.ai-agents-dev.svc.cluster.local:8002
+      - conjur.ai-agents-infra.svc.cluster.local:443
+    t2:                   # Internal services tier
+      - gpis.ai-agents-dev.svc.cluster.local:8000
+      - kubernetes.default.svc.cluster.local:6443
+      - otel-collector.observability.svc.cluster.local:4317
+    t3External:           # Direct API (dev only — GovernanceRouter pod only)
+      allowedForGovernanceRouterOnly: true
+      endpoints:
+        - api.anthropic.com:443
+        - generativelanguage.googleapis.com:443
+        - services.nvd.nist.gov:443
+
+# ─── No PodDisruptionBudget in dev ───────────────────────────────────────
+podDisruptionBudget:
+  enabled: false
+
+# ─── HPA disabled in dev ─────────────────────────────────────────────────
+autoscaling:
+  enabled: false
+
+# ─── QA Agent Scoring (dev threshold) ────────────────────────────────────
+qa:
+  scoreThreshold: 80
+  targetEnv: dev
+
+# ─── Monitoring ───────────────────────────────────────────────────────────
+monitoring:
+  prometheus:
+    enabled: true
+    scrapeInterval: 30s
+  grafana:
+    enabled: false        # Manual install in dev

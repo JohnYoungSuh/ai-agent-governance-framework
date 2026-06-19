@@ -1,0 +1,182 @@
+# Tool Registry — GovernanceRouter FQDN + Method Allowlist
+# Standard: NIST SP 800-207 ZT + OWASP LLM Top 10 (LLM08: Excessive Agency)
+#
+# ENFORCEMENT MODEL:
+#   L7 App-Layer (NOW):   GovernanceRouter.execute_tool() validates every call
+#   L4 NetworkPolicy:     Agent pods → DENY all internet egress
+#                         GovernanceRouter pod → ALLOW egress to approved FQDNs only
+#   L7 Infrastructure:    Future — Cilium CiliumNetworkPolicy toFQDNs (ticket: FQDN-001)
+#
+# CMDB REQUIREMENT: Every tool entry must be registered in the CMDB (PIP).
+# GovernanceRouter validates: Is Agent X authorized to use Tool Y on Destination Z?
+# Authorization check: agent_tier >= tool.requires_tier AND agent_id in tool.authorized_agents (or ALL)
+#
+# PROMPT INJECTION PROTECTION:
+# GovernanceRouter.execute_tool() NEVER passes raw agent payload directly as tool input.
+# It extracts only the structured fields defined in request_schema before calling the tool.
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2026-06-19"
+  enforcement: "GovernanceRouter app-layer + L4 NetworkPolicy"
+  future_enforcement: "Cilium FQDN-001"
+
+tools:
+
+  # ─────────────────────────────────────────────
+  # Web / Search Tools (External — T3 Egress via GovernanceRouter proxy)
+  # ─────────────────────────────────────────────
+  web_search:
+    description: "Web search for vulnerability intel, CVE lookups, documentation"
+    allowed_fqdns:
+      - "api.serper.dev"
+      - "api.bing.microsoft.com"
+      - "services.nvd.nist.gov"       # NVD CVE API
+      - "cve.circl.lu"                # CIRCL CVE API (FedRAMP-friendly mirror)
+    allowed_methods: ["GET"]
+    max_response_bytes: 102400        # 100KB
+    max_requests_per_hour: 100
+    requires_tier: 1
+    authorized_agents: ALL
+    request_schema:
+      query: "string (max 200 chars, alphanumeric + spaces only)"
+      max_results: "integer (1-10)"
+    strip_from_response: ["Set-Cookie", "Authorization"]
+    status: APPROVED
+    cmdb_registered: true
+    nist_controls: [RA-5, SI-4]
+
+  cve_lookup:
+    description: "CVE database lookup — NVD API direct query"
+    allowed_fqdns:
+      - "services.nvd.nist.gov"
+      - "cve.circl.lu"
+    allowed_methods: ["GET"]
+    max_response_bytes: 51200         # 50KB
+    max_requests_per_hour: 200
+    requires_tier: 1
+    authorized_agents: ["security-agent", "architect-agent"]
+    request_schema:
+      cve_id: "string matching CVE-\\d{4}-\\d{4,}"
+    status: APPROVED
+    cmdb_registered: true
+    nist_controls: [RA-5, SI-3]
+
+  # ─────────────────────────────────────────────
+  # Internal Database Tools (T2 — via GovernanceRouter)
+  # ─────────────────────────────────────────────
+  sql_query:
+    description: "Read-only SQL query against internal analytics DB"
+    allowed_fqdns:
+      - "internal-db.ai-agents-prod.svc.cluster.local"
+    allowed_methods: ["POST"]
+    max_response_bytes: 524288        # 512KB
+    max_requests_per_hour: 50
+    requires_tier: 2
+    authorized_agents: ["ai-agent", "architect-agent"]
+    request_schema:
+      query: "string (SELECT only — validated by GovernanceRouter SQL parser)"
+      database: "string (allowlist: analytics, metrics)"
+    sql_restrictions:
+      - "SELECT statements only (INSERT/UPDATE/DELETE/DROP → DENY)"
+      - "No raw string interpolation — parameterized queries only"
+      - "Max result rows: 1000"
+    status: APPROVED
+    cmdb_registered: true
+    nist_controls: [AC-3, AC-6, AU-2]
+
+  cmdb_read:
+    description: "Read agent manifests and CMDB entries"
+    allowed_fqdns:
+      - "cmdb.ai-agents-prod.svc.cluster.local"
+    allowed_methods: ["GET"]
+    max_response_bytes: 51200
+    max_requests_per_hour: 500
+    requires_tier: 1
+    authorized_agents: ALL
+    request_schema:
+      agent_id: "string (alphanumeric, dash, underscore — max 64 chars)"
+      fields: "array of string (allowlist: id, tier, namespace, capabilities)"
+    status: APPROVED
+    cmdb_registered: true
+    nist_controls: [CM-8, IA-3]
+
+  # ─────────────────────────────────────────────
+  # Kubernetes Operations Tools (T2/T3)
+  # ─────────────────────────────────────────────
+  kubectl_read:
+    description: "Read K8s resources — pods, services, configmaps (no secrets)"
+    allowed_fqdns:
+      - "kubernetes.default.svc.cluster.local"
+    allowed_methods: ["GET"]
+    max_response_bytes: 204800
+    max_requests_per_hour: 200
+    requires_tier: 2
+    authorized_agents: ["security-agent", "it-ops-agent", "architect-agent"]
+    request_schema:
+      resource_type: "string (allowlist: pods, services, configmaps, deployments, events)"
+      namespace: "string (must match agent's declared namespace)"
+    k8s_restrictions:
+      - "No access to secrets (Secret resource type → DENY)"
+      - "Namespace must match agent's own namespace"
+      - "No cluster-scoped resources (ClusterRole, ClusterRoleBinding → DENY)"
+    requires_jira_cr: false
+    status: APPROVED
+    cmdb_registered: true
+    nist_controls: [AC-3, AC-6]
+
+  kubectl_deploy:
+    description: "Deploy/restart K8s workloads — Tier 3, requires Jira CR"
+    allowed_fqdns:
+      - "kubernetes.default.svc.cluster.local"
+    allowed_methods: ["POST", "PATCH"]
+    max_response_bytes: 51200
+    max_requests_per_hour: 20
+    requires_tier: 3
+    authorized_agents: ["it-ops-agent"]
+    request_schema:
+      resource_type: "string (allowlist: deployments, rollouts)"
+      action: "string (allowlist: restart, scale, rollback)"
+      namespace: "string (must match agent's declared namespace)"
+      target_name: "string (alphanumeric, dash — max 64 chars)"
+    requires_jira_cr: true
+    maintenance_window_check: true
+    status: APPROVED
+    cmdb_registered: true
+    nist_controls: [CM-3, AC-6, AU-2]
+
+  # ─────────────────────────────────────────────
+  # SIEM / Observability Tools
+  # ─────────────────────────────────────────────
+  siem_emit:
+    description: "Emit SIEM event via OTLP exporter"
+    allowed_fqdns:
+      - "otel-collector.ai-agents-prod.svc.cluster.local"
+      - "otel-collector.observability.svc.cluster.local"
+    allowed_methods: ["POST"]
+    max_response_bytes: 4096
+    max_requests_per_hour: 10000     # High volume — every governance decision emits
+    requires_tier: 1
+    authorized_agents: ALL
+    request_schema:
+      event_type: "string (validated against siem-event.json schema)"
+      audit_id: "string (UUID format)"
+      actor: "string (alphanumeric, dash — max 64 chars)"
+    status: APPROVED
+    cmdb_registered: true
+    nist_controls: [AU-2, AU-12, SI-4]
+
+  # ─────────────────────────────────────────────
+  # EXPLICITLY DENIED — Document for audit transparency
+  # ─────────────────────────────────────────────
+  denied_tools:
+    - name: "arbitrary_http"
+      reason: "No catch-all HTTP tool — all destinations must be explicitly registered"
+    - name: "shell_exec"
+      reason: "No arbitrary shell execution — use kubectl_deploy for K8s ops"
+    - name: "file_system_write"
+      reason: "Agent pods use readOnlyRootFilesystem — no direct FS writes"
+    - name: "social_media"
+      reason: "No Twitter/LinkedIn/social egress for AI agents"
+    - name: "raw_llm_direct"
+      reason: "Agents cannot call LLM APIs directly — must use GovernanceRouter.execute_tool()"

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+configMapGenerator:
+  - name: agent-rules
+    files:
+      - agent-role.md=../../../.agents/rules/agent-role.md
+      - governance-rules.md=../../../.agents/rules/governance-rules.md
+      - security-overrides.md=../../../.agents/rules/security-overrides.md
+      - testing.md=../../../.agents/rules/testing.md
+      - post-goal-validation.md=../../../.agents/rules/post-goal-validation.md
+      - project-knowledge.md=../../../.agents/rules/project-knowledge.md
+      - qa-tester-role.md=../../../.agents/rules/qa-tester-role.md
+      - workflow.md=../../../.agents/rules/workflow.md
+      - ide-rules.md=../../../.agents/rules/ide-rules.md
+      - project-context.md=../../../.agents/rules/project-context.md

@@ -1,0 +1,8 @@
+{
+  "name": "Alpha-Trading-Bot",
+  "agent_type": "RG",
+  "downtime_cost_per_hour": 100000,
+  "opportunity_cost_per_hour": 5000,
+  "governance_loe_hours": 20,
+  "total_dev_capacity_hours": 160
+}

@@ -1,0 +1,40 @@
+{
+  "controls": {
+    "MAP-1.1": {
+      "function": "MAP",
+      "description": "Context and intended use of AI system are understood.",
+      "financial_outcome": "Reduces Scope Creep Liability",
+      "insurance_premium_impact_percent": 0.02,
+      "compliance_weight": 5,
+      "ale_reduction_factor": 0.10
+    },
+    "MEASURE-2.3": {
+      "function": "MEASURE",
+      "description": "System reliability and robustness are tested.",
+      "financial_outcome": "Protects Revenue from Downtime",
+      "insurance_premium_impact_percent": 0.05,
+      "compliance_weight": 9,
+      "ale_reduction_factor": 0.25
+    },
+    "MANAGE-3.2": {
+      "function": "MANAGE",
+      "description": "Risk treatments (guardrails) are implemented.",
+      "financial_outcome": "Reduces Direct Loss Exposure",
+      "insurance_premium_impact_percent": 0.10,
+      "compliance_weight": 10,
+      "ale_reduction_factor": 0.40
+    },
+    "GOVERN-1.4": {
+      "function": "GOVERN",
+      "description": "Processes for human oversight are established.",
+      "financial_outcome": "Reduces Regulatory Fine Liability",
+      "insurance_premium_impact_percent": 0.03,
+      "compliance_weight": 8,
+      "ale_reduction_factor": 0.15
+    }
+  },
+  "general_multipliers": {
+      "insurance_discount_cap": 0.20,
+      "audit_confidence_boost": 1.5
+  }
+}

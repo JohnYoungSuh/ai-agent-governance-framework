@@ -39,6 +39,8 @@ serviceAccount:
   create: true
   annotations: {}
   name: ""
+  automountServiceAccountToken: false
+
 
 # Pod Security Context
 podSecurityContext:

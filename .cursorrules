@@ -1,0 +1,52 @@
+# AI Agent Governance Framework — IDE Rules
+# For Cursor, Windsurf, Copilot, GitHub Copilot, and other AI coding assistants
+
+---
+
+## 🏛️ Key Architectural Decisions
+
+1. **GPIS is the Single PDP**: `app/main.py` is the ONLY Policy Decision Point. Every Tier 2+ operation requires a GPIS JWT before execution.
+2. **Token Router Hierarchy**: GovernanceRouter must evaluate in order: Cache → Intent Router → Simple Rules → Large Model. Never skip levels.
+3. **Audit Trail is a Patent Anchor**: `policies/schemas/audit-trail.json` structure is immutable. Every governance decision emits one schema-validated event.
+4. **JWT Secrets via Environment**: `SECRET_KEY = os.getenv("GPIS_JWT_SECRET")` always. No hardcoded secrets.
+5. **Python Policy Files Over Logic**: Governance rules go in `policies/simple_rules.yml`, not as application conditionals.
+
+---
+
+## 🔒 Security & Compliance
+
+- **Zero Secrets**: Never commit credentials, API keys, JWT secrets, or passwords. `os.getenv()` with startup assertions only.
+- **Input Validation**: All GPIS endpoints must validate: max 500 chars, allowlist regex, prompt injection blocking.
+- **Tier 3/4 Requires Jira CR**: Never issue Tier 3/4 JWT without `validate-jira-approval.py` confirmation.
+- **Tests Must Pass**: `pytest tests/ -v` → 0 failures, ≥80% coverage before any commit.
+- **No Ambiguous Policies**: Every policy rule must have explicit ALLOW and DENY tests (see LL-002).
+
+---
+
+## 🚀 Development Workflow
+
+1. Check `NEXT_RELEASE_TODO.md` for current priority item (🔴 → 🏛️ → 🟡 → 🟢 → 🔵)
+2. Read `LESSONS_LEARNED.md` — match patterns before debugging
+3. Implement fix → `pytest tests/ -v` → `ruff check .` → schema validate
+4. Mark `[x]` in `NEXT_RELEASE_TODO.md` with date + log in `## 📍 Session Log`
+5. Commit: `fix:` / `feat:` / `sec:` / `compliance:` (Conventional Commits)
+6. Push → green GitHub Actions CI = done
+
+---
+
+## 🧪 Testing Rules
+
+- Every new GPIS policy rule requires BOTH an allow-path AND deny-path test
+- Schema validation: `pytest tests/compliance/ -v` → 0 failures
+- SIEM validation: `./scripts/test-siem-emitter.sh` → 10/10 pass
+- Token benchmark: `python3 scripts/benchmark_token_savings.py --format json` → ≥70% savings
+
+---
+
+## ⚠️ Known P0 Issues (Fix First)
+
+| File | Issue |
+|------|-------|
+| `app/main.py:11` | Hardcoded JWT secret |
+| `app/policy_engine.py:30` | CVE > 9.0 → APPROVED ambiguity |
+| `scripts/governance_router.py` | LLM clients are mock stubs |

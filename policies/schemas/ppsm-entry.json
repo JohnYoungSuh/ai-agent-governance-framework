@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PPSM Registry Entry Schema",
+  "description": "Validates the Ports, Protocols, Services Management (PPSM) registry for NIST SP 800-207 and DISA CAL compliance",
+  "type": "object",
+  "required": ["metadata", "services"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["version", "last_updated", "reviewed_by"],
+      "properties": {
+        "version": { "type": "string" },
+        "last_updated": { "type": "string" },
+        "reviewed_by": { "type": "string" },
+        "framework_version": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "description",
+          "port",
+          "protocol",
+          "direction",
+          "consumers",
+          "risk_level",
+          "nist_controls",
+          "ppsm_category",
+          "egress_tier",
+          "status",
+          "verified"
+        ],
+        "properties": {
+          "description": { "type": "string" },
+          "port": { "type": "integer" },
+          "alt_port": { "type": "integer" },
+          "protocol": { 
+            "type": "string",
+            "enum": ["TCP", "UDP", "HTTP", "HTTPS", "gRPC", "mTLS", "mTLS HTTPS"]
+          },
+          "direction": { 
+            "type": "string",
+            "enum": ["inbound", "outbound", "bidirectional"]
+          },
+          "consumers": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "allowed_methods": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "denied_methods": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "risk_level": { 
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"]
+          },
+          "nist_controls": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "ppsm_category": { 
+            "type": "string",
+            "enum": ["CAT-I", "CAT-II", "CAT-III"]
+          },
+          "egress_tier": { 
+            "type": "string",
+            "enum": ["T1", "T2", "T3", "DENY"]
+          },
+          "status": { 
+            "type": "string",
+            "enum": ["DRAFT_FOR_REVIEW", "APPROVED", "DEPRECATED"]
+          },
+          "verified": { "type": "boolean" },
+          "direct_agent_access": { "type": "string" },
+          "namespace_restriction": { "type": "string" },
+          "k3s_only": { "type": "boolean" },
+          "eks_only": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,368 @@
+# PPSM Registry — AI Agent Governance Framework
+# Standard: NIST SP 800-207 Zero Trust Architecture + DISA PPSM CAL
+# Status: DRAFT_FOR_REVIEW — all entries require Security Architect sign-off
+#
+# Schema: policies/schemas/ppsm-entry.json
+# L4: Enforced by K8s NetworkPolicy (flannel/K3s or Calico/EKS)
+# L7: Enforced by GovernanceRouter Tool Registry (app-layer, interim)
+# Future: Cilium CiliumNetworkPolicy with toFQDNs (ticket: FQDN-001)
+#
+# Fields:
+#   port: TCP/UDP port number
+#   protocol: TCP | UDP | gRPC | HTTPS | mTLS
+#   direction: inbound | outbound | bidirectional
+#   consumers: which agent types or components may connect
+#   allowed_methods: L7 HTTP method allowlist (app-layer enforced)
+#   risk_level: low | medium | high | critical
+#   nist_controls: NIST 800-53 Rev 5 control IDs
+#   ppsm_category: CAT-I (restricted) | CAT-II (controlled) | CAT-III (standard)
+#   status: DRAFT_FOR_REVIEW | APPROVED | DEPRECATED
+#   verified: false until Security Architect reviews
+#   egress_tier: T1 (internal-vault) | T2 (internal-gpis) | T3 (external-llm) | DENY
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2026-06-19"
+  reviewed_by: PENDING_SECURITY_ARCHITECT
+  framework_version: "2.1.0"
+  note: "All entries are DRAFT_FOR_REVIEW — populate from known service inventory, pending formal Security Architect sign-off per DISA PPSM CAL"
+
+services:
+
+  # ─────────────────────────────────────────────
+  # GPIS — Governance Policy Inquiry Service (PDP)
+  # ─────────────────────────────────────────────
+  gpis:
+    description: "Governance Policy Inquiry Service — single Policy Decision Point"
+    port: 8000
+    protocol: HTTPS
+    direction: inbound
+    consumers:
+      - security-agent
+      - it-ops-agent
+      - ai-agent
+      - architect-agent
+      - governance-router
+    allowed_methods:
+      - "POST /api/v1/authorize"
+      - "GET /api/v1/verify"
+      - "GET /health"
+      - "GET /ready"
+      - "GET /metrics"
+    denied_methods:
+      - "DELETE /api/v1/policies"  # PAP admin only
+    risk_level: critical
+    nist_controls: [AC-3, AC-6, AU-2, IA-3]
+    ppsm_category: CAT-I
+    egress_tier: T2
+    status: DRAFT_FOR_REVIEW
+    verified: false
+    namespace_restriction: ai-agents-prod
+
+  gpis_admin:
+    description: "GPIS Admin API — suspend/revoke/status (PAP endpoints)"
+    port: 8001
+    protocol: HTTPS
+    direction: inbound
+    consumers:
+      - human-pa-operator   # via Slack bot backend
+      - jira-webhook        # Jira CR approval webhook
+    allowed_methods:
+      - "POST /admin/v1/suspend/{agent_id}"
+      - "POST /admin/v1/revoke/{agent_id}"
+      - "GET /admin/v1/status/{agent_id}"
+      - "POST /webhooks/jira/cr-approved"
+      - "GET /api/v1/suspension/{token}/status"
+    risk_level: critical
+    nist_controls: [AC-3, AC-5, CM-3, AU-12]
+    ppsm_category: CAT-I
+    egress_tier: T2
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  # ─────────────────────────────────────────────
+  # Agent API Servers (all agents run on :8080)
+  # ─────────────────────────────────────────────
+  security_agent:
+    description: "Security Agent FastAPI server — Tier 2"
+    port: 8080
+    protocol: HTTPS
+    direction: inbound
+    consumers:
+      - governance-router
+      - monitoring-stack    # Prometheus scrape
+    allowed_methods:
+      - "GET /health"
+      - "GET /metrics"
+      - "POST /api/v1/scan"
+      - "POST /api/v1/audit"
+    risk_level: high
+    nist_controls: [AC-6, AU-2, RA-5, SI-3]
+    ppsm_category: CAT-I
+    egress_tier: T2
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  it_ops_agent:
+    description: "IT-Ops Agent FastAPI server — Tier 3"
+    port: 8080
+    protocol: HTTPS
+    direction: inbound
+    consumers:
+      - governance-router
+      - monitoring-stack
+    allowed_methods:
+      - "GET /health"
+      - "GET /metrics"
+      - "POST /api/v1/deploy"
+      - "POST /api/v1/incident"
+      - "GET /api/v1/runbook/{id}"
+    risk_level: high
+    nist_controls: [AC-6, CM-3, IR-4, AU-2]
+    ppsm_category: CAT-I
+    egress_tier: T2
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  ai_agent:
+    description: "AI Agent — ML training job CronJob — Tier 2"
+    port: 8080
+    protocol: HTTPS
+    direction: inbound
+    consumers:
+      - governance-router
+      - monitoring-stack
+    allowed_methods:
+      - "GET /health"
+      - "GET /metrics"
+      - "POST /api/v1/training/start"
+      - "GET /api/v1/training/status/{job_id}"
+    risk_level: medium
+    nist_controls: [AC-6, AU-2, SC-28]
+    ppsm_category: CAT-II
+    egress_tier: T2
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  architect_agent:
+    description: "Architect Agent FastAPI server — Tier 4 (highest privilege)"
+    port: 8080
+    protocol: HTTPS
+    direction: inbound
+    consumers:
+      - governance-router
+      - monitoring-stack
+    allowed_methods:
+      - "GET /health"
+      - "GET /metrics"
+      - "POST /api/v1/design"
+      - "POST /api/v1/review"
+    risk_level: critical
+    nist_controls: [AC-5, AC-6, CM-3, AU-12]
+    ppsm_category: CAT-I
+    egress_tier: T2
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  # ─────────────────────────────────────────────
+  # Memory Tier (T1 — Internal Vault tier)
+  # ─────────────────────────────────────────────
+  redis:
+    description: "Redis — agent short-term memory + HITL checkpoint store"
+    port: 6379
+    protocol: TCP
+    direction: bidirectional
+    consumers:
+      - governance-router   # ONLY — agents access via GovernanceRouter.memory_*()
+    allowed_methods: []     # Non-HTTP; protocol-level access via GovernanceRouter only
+    direct_agent_access: DENY  # Agents NEVER connect directly — enforced by NetworkPolicy
+    risk_level: high        # Contains HITL context checkpoints, budget counters
+    nist_controls: [SC-28, AC-4, SC-8]
+    ppsm_category: CAT-I
+    egress_tier: T1
+    security_notes:
+      - "AOF persistence (appendonly yes) — survives K3s node reboot"
+      - "runAsUser: 1000, fsGroup: 2000 — no root required for local-path PVC"
+      - "Redis LOCK key pattern: agent_lock:{agent_id} — prevents concurrent task collision"
+      - "Budget counter key: agent_id:tokens:rolling_24h — TTL = 86400s"
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  chroma_vectordb:
+    description: "Chroma VectorDB — agent long-term semantic memory"
+    port: 8002
+    protocol: HTTP   # Internal only — no TLS required (same-namespace)
+    direction: bidirectional
+    consumers:
+      - governance-router   # ONLY — agents access via GovernanceRouter.memory_read()
+    direct_agent_access: DENY
+    collection_isolation: "One collection per agent_id: collection_{agent_id}"
+    risk_level: medium
+    nist_controls: [SC-28, AC-4]
+    ppsm_category: CAT-II
+    egress_tier: T1
+    security_notes:
+      - "runAsUser: 1000, fsGroup: 2000 — consistent with Redis security context"
+      - "K3s dev: in-process (no separate pod), local-path PVC"
+      - "EKS prod: dedicated pod with gp3 PVC, KMS encrypted"
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  # ─────────────────────────────────────────────
+  # Identity / Secrets Broker (T1)
+  # ─────────────────────────────────────────────
+  conjur_authn:
+    description: "CyberArk Conjur / AWS Secrets Manager IRSA endpoint"
+    port: 443
+    protocol: mTLS HTTPS
+    direction: outbound
+    consumers:
+      - conjur-sidecar      # Per-agent sidecar only
+      - governance-router   # credential checkout/checkin
+    allowed_methods:
+      - "POST /authn-k8s/{service_account}/authenticate"
+      - "GET /secrets/{account}/{kind}/{id}"
+      - "DELETE /authn/{account}/session"  # Checkin on HITL suspend
+    risk_level: critical
+    nist_controls: [IA-5, SC-8, SC-28, AC-3]
+    ppsm_category: CAT-I
+    egress_tier: T1
+    security_notes:
+      - "K3s: Conjur OSS pod in ai-agents-infra namespace"
+      - "EKS: AWS Secrets Manager via IRSA (no Conjur pod, IAM-native)"
+      - "Session must be invalidated BEFORE agent enters HITL suspended state"
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  # ─────────────────────────────────────────────
+  # Kubernetes API Server
+  # ─────────────────────────────────────────────
+  kubernetes_api:
+    description: "K8s API Server — agent RBAC operations"
+    port: 6443
+    protocol: HTTPS
+    direction: outbound
+    consumers:
+      - security-agent      # Read pod/node status
+      - it-ops-agent        # Deploy/restart operations
+      - governance-router   # TokenReview (Conjur identity validation)
+    allowed_methods:
+      - "GET /api/v1/namespaces/{ns}/pods"
+      - "GET /api/v1/nodes"
+      - "POST /apis/authentication.k8s.io/v1/tokenreviews"  # Conjur attestation
+    risk_level: high
+    nist_controls: [AC-3, AU-2, SC-7]
+    ppsm_category: CAT-I
+    egress_tier: T2
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  # ─────────────────────────────────────────────
+  # Monitoring (T2 — Internal)
+  # ─────────────────────────────────────────────
+  prometheus_scrape:
+    description: "Prometheus metrics scrape endpoint (all agents)"
+    port: 9090
+    protocol: HTTP
+    direction: inbound
+    consumers: [prometheus-server]
+    allowed_methods: ["GET /metrics"]
+    risk_level: low
+    nist_controls: [AU-6, SI-4]
+    ppsm_category: CAT-III
+    egress_tier: T2
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  otel_siem:
+    description: "OpenTelemetry SIEM exporter — OTLP gRPC to Splunk/Datadog/CloudWatch"
+    port: 4317
+    protocol: gRPC
+    direction: outbound
+    consumers:
+      - otel-siem-emitter   # scripts/otel-siem-emitter.py
+      - governance-router
+    risk_level: medium
+    nist_controls: [AU-2, AU-12, SI-4]
+    ppsm_category: CAT-II
+    egress_tier: T2          # Internal SIEM endpoint
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  # ─────────────────────────────────────────────
+  # LLM Gateway (T3 — External via Proxy only)
+  # ─────────────────────────────────────────────
+  llm_proxy:
+    description: "LLM Proxy — GovernanceRouter sole external LLM gateway"
+    port: 8443
+    protocol: HTTPS
+    direction: outbound
+    consumers:
+      - governance-router   # ONLY pod allowed T3 external egress
+    allowed_methods:
+      - "POST /v1/messages"           # Anthropic (via Bedrock or direct)
+      - "POST /v1/generateContent"    # Google Vertex AI
+    credential_scrubbing: true        # strips JWT/AWS/Conjur token patterns
+    direct_agent_access: DENY         # ALL agent pods — enforced by NetworkPolicy
+    risk_level: critical
+    nist_controls: [SC-7, AC-4, SC-8, SI-3]
+    ppsm_category: CAT-I
+    egress_tier: T3
+    security_notes:
+      - "K3s dev: direct API calls (standard endpoints — dev only, NOT FedRAMP)"
+      - "EKS prod: AWS Bedrock us-gov-east-1 via PrivateLink VPC Interface Endpoint"
+      - "EKS prod: Google Vertex AI via Private Service Connect"
+      - "FIPS 140-2 mode required for EKS prod (TLS 1.2+ only, FIPS-approved ciphers)"
+    llm_providers:
+      bedrock_prod:
+        endpoint: "bedrock-runtime.us-gov-east-1.amazonaws.com"
+        vpc_endpoint: true
+        fips_enabled: true
+        model_arns:
+          - "arn:aws-us-gov:bedrock:us-gov-east-1::foundation-model/anthropic.claude-sonnet-4-5-v1:0"
+          - "arn:aws-us-gov:bedrock:us-gov-east-1::foundation-model/anthropic.claude-haiku-4-5"
+      vertex_secondary:
+        endpoint: "us-central1-aiplatform.googleapis.com"
+        private_service_connect: true
+        fips_enabled: false           # Vertex AI does not have FIPS mode — staging only
+        model_ids:
+          - "gemini-2.5-flash"
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  # ─────────────────────────────────────────────
+  # Ingress (Environment-Specific)
+  # ─────────────────────────────────────────────
+  ingress_k3s:
+    description: "K3s Traefik Ingress — inbound from kube-system namespace"
+    port: 80
+    alt_port: 443
+    protocol: HTTPS
+    direction: inbound
+    consumers:
+      - traefik             # kube-system namespace — MUST be allowed or agents are unreachable
+    risk_level: medium
+    nist_controls: [SC-7, AC-17]
+    ppsm_category: CAT-II
+    egress_tier: DENY
+    k3s_only: true
+    security_notes:
+      - "Allow ingress from kube-system namespace (Traefik) to ai-agents namespace"
+      - "Without this, K3s Traefik cannot route to agent pods — namespace isolation breaks external access"
+    status: DRAFT_FOR_REVIEW
+    verified: false
+
+  ingress_eks:
+    description: "EKS AWS ALB Ingress Controller"
+    port: 443
+    protocol: HTTPS
+    direction: inbound
+    consumers:
+      - aws-load-balancer-controller
+    risk_level: medium
+    nist_controls: [SC-7, AC-17]
+    ppsm_category: CAT-II
+    egress_tier: DENY
+    eks_only: true
+    status: DRAFT_FOR_REVIEW
+    verified: false

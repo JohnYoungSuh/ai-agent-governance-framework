@@ -174,9 +174,7 @@ ai-agent-governance-framework/
 │   └── lambda/                    # Lambda functions
 ├── test-output/                   # ⭐ Test artifacts (NEW)
 │   └── siem-events/               # SIEM event test output
-├── ENHANCEMENTS.md                # ⭐ v2.0 enhancements
-├── VERIFICATION-EVIDENCE.md       # ⭐ Implementation evidence (NEW)
-└── COMMIT-EVIDENCE.txt            # ⭐ Git commit proof (NEW)
+└── docs/ENHANCEMENTS.md           # ⭐ v2.0 enhancements
 ```
 
 ## 🚀 Quick Start
@@ -412,7 +410,7 @@ This framework (v2.1) aligns with and incorporates best practices from:
 
 All features are implemented, tested, and committed to the repository. For verification:
 
-- **[VERIFICATION-EVIDENCE.md](VERIFICATION-EVIDENCE.md)** - Complete evidence with commit hashes, file locations, code samples
+- **[VERIFICATION-EVIDENCE.md](docs/archive/VERIFICATION-EVIDENCE.md)** - Complete evidence with commit hashes, file locations, code samples (archived)
 - **[COMMIT-EVIDENCE.txt](COMMIT-EVIDENCE.txt)** - Git commit proof with grep verification commands
 
 **Key Commits:**

@@ -1,0 +1,84 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ai-agent.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ai-agent.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "ai-agent.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  
+  # Ingress Rules
+  ingress:
+    # Allow traffic from allowed namespaces (e.g. Traefik, ALB, monitoring)
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.port }}
+        - protocol: TCP
+          port: {{ .Values.service.metricsPort }}
+          
+  # Egress Rules
+  egress:
+    # 1. Allow DNS Resolution (CAT-III / Standard)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # 2. Allow Egress to T1 (Internal Vault / Memory / Secrets Manager)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+        - podSelector:
+            matchLabels:
+              app: chroma
+      ports:
+        - protocol: TCP
+          port: 6379  # Redis
+        - protocol: TCP
+          port: 8002  # Chroma
+
+    # 3. Allow Egress to T2 (GPIS PDP + Kubernetes API + OTEL Collector)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: gpis
+      ports:
+        - protocol: TCP
+          port: 8000  # GPIS
+        - protocol: TCP
+          port: 8001  # GPIS Admin
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 6443  # K8s API Server (standard)
+        - protocol: TCP
+          port: 4317  # OTEL gRPC SIEM Collector
+        - protocol: TCP
+          port: 443   # AWS Secrets Manager / external endpoints (HTTPS)
+
+    # 4. Egress to T3 (External LLM Endpoints - allowed for GovernanceRouter / agents if needed)
+    {{- if .Values.networkPolicy.egressTiers }}
+    {{- if and .Values.networkPolicy.egressTiers.t3External (or (eq .Values.agent.type "governance-router") (not .Values.networkPolicy.egressTiers.t3External.allowedForGovernanceRouterOnly)) }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- end }}
+    {{- end }}
+{{- end }}

@@ -35,3 +35,20 @@ temp/
 secrets/
 credentials.yml
 api-keys.txt
+
+# Python Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Bytecode and Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.cov/

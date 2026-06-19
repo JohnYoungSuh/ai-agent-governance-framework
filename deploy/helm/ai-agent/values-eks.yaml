@@ -1,0 +1,233 @@
+# EKS Prod Values — AI Agent Governance Framework
+# Target: AWS EKS (FedRAMP Moderate Production Environment)
+# CNI: Calico — L4 NetworkPolicy with strict egress/ingress controls
+# Storage: gp3 (KMS encrypted)
+# Secrets: AWS Secrets Manager via IAM Roles for ServiceAccounts (IRSA)
+# LLM: AWS Bedrock us-gov-east-1 via PrivateLink (FedRAMP High boundary)
+#
+# Usage:
+#   helm upgrade --install ai-agent deploy/helm/ai-agent \
+#     -f deploy/helm/ai-agent/values-eks.yaml \
+#     -n ai-agents-prod
+
+global:
+  environment: prod
+  namespace: ai-agents-prod
+  clusterType: eks
+
+# ─── Image Registry (Production GHCR / ECR) ───────────────────────────────
+image:
+  registry: "602401143452.dkr.ecr.us-gov-east-1.amazonaws.com"  # FedRAMP ECR repo
+  pullPolicy: Always
+  tag: v2.1.0-release
+
+# ─── Ingress (AWS ALB Ingress Controller) ──────────────────────────────────
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-FIPS-2023-04 # FIPS-compliant SSL policy
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws-us-gov:acm:us-gov-east-1:123456789012:certificate/abc"
+
+# ─── GPIS (Policy Decision Point) - High Availability ─────────────────────
+gpis:
+  replicas: 3              # Production HA
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 1024Mi
+  service:
+    port: 8000
+  env:
+    LOG_LEVEL: INFO
+    GPIS_ENV: production
+
+# ─── Agent Resources (HA configurations) ──────────────────────────────────
+agents:
+  security:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    tier: 2
+    port: 8080
+
+  it_ops:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    tier: 3
+    port: 8080
+
+  ai:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1024Mi
+      limits:
+        cpu: 2000m
+        memory: 4096Mi
+    tier: 2
+    port: 8080
+
+  architect:
+    enabled: true
+    replicas: 2
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    tier: 4
+    port: 8080
+
+# ─── Security Context (Strict Pod Security Standards) ─────────────────────
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  fsGroup: 65534
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  runAsNonRoot: true
+  runAsUser: 65534
+
+# ─── Memory Tier: Redis Sentinel HA (KMS Encrypted gp3) ──────────────────
+redis:
+  enabled: true
+  replicas: 3              # Redis HA Sentinel
+  image: "redis:7.2-alpine@sha256:7bbcf53761cc20f92479f67a216db8a1f681cfc84305bc5be95759bc7e828d57"
+  port: 6379
+  storageClass: gp3-encrypted
+  storageSize: 10Gi
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 2000
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+  config:
+    appendonly: "yes"
+    appendfsync: "everysec"
+    maxmemory: "2gb"
+    maxmemory-policy: "allkeys-lru"
+  persistence:
+    enabled: true
+    mountPath: /data
+
+# ─── Memory Tier: Chroma VectorDB Dedicated Pod (gp3) ─────────────────────
+chroma:
+  enabled: true
+  mode: service            # Dedicated Chroma cluster
+  port: 8002
+  storageClass: gp3-encrypted
+  storageSize: 20Gi
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 2000
+
+# ─── Identity / Secrets (AWS Secrets Manager IRSA) ───────────────────────
+secrets:
+  provider: aws-irsa       # AWS-native secretless brokerage via IAM roles
+  aws:
+    roleArn: "arn:aws-us-gov:iam::123456789012:role/ai-agents-secret-broker"
+    region: "us-gov-east-1"
+  serviceAccountToken:
+    expirationSeconds: 900
+    audience: "secretsmanager.amazonaws.com"
+
+# ─── LLM Provider (FedRAMP High AWS Bedrock on Gov-Cloud) ────────────────
+llm:
+  provider: bedrock-prod   # Bedrock us-gov-east-1
+  smallModel:
+    provider: bedrock
+    model: "arn:aws-us-gov:bedrock:us-gov-east-1::foundation-model/anthropic.claude-haiku-4-5"
+  largeModel:
+    provider: bedrock
+    model: "arn:aws-us-gov:bedrock:us-gov-east-1::foundation-model/anthropic.claude-sonnet-4-5-v1:0"
+  proxy:
+    enabled: true          # Outbound calls pass through llm-proxy
+    port: 8443
+    scrubCredentials: true
+  budgetWarningPct: 80
+  budgetSuspendPct: 95
+
+# ─── NetworkPolicy (Strict Calico enforcement) ────────────────────────────
+networkPolicy:
+  enabled: true
+  cni: calico
+  allowFromNamespaces:
+    - aws-load-balancer-controller
+    - monitoring           # Observability / Prometheus namespace
+  denyAllDefault: true
+  egressTiers:
+    t1:                   # Internal vault tier (Memory, Conjur)
+      - redis.ai-agents-prod.svc.cluster.local:6379
+      - chroma.ai-agents-prod.svc.cluster.local:8002
+      - secretsmanager.us-gov-east-1.amazonaws.com:443
+    t2:                   # Internal services tier
+      - gpis.ai-agents-prod.svc.cluster.local:8000
+      - kubernetes.default.svc.cluster.local:6443
+      - otel-collector.monitoring.svc.cluster.local:4317
+    t3External:           # External LLM endpoint - Bedrock VPC Endpoint ONLY
+      allowedForGovernanceRouterOnly: true
+      endpoints:
+        - bedrock-runtime.us-gov-east-1.amazonaws.com:443
+        - vpce-0123456789abcdef0-bedrock.us-gov-east-1.vpce.amazonaws.com:443
+
+# ─── PodDisruptionBudget HA ───────────────────────────────────────────────
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# ─── HPA Autoscaling ──────────────────────────────────────────────────────
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# ─── QA Agent Scoring (prod threshold) ───────────────────────────────────
+qa:
+  scoreThreshold: 95
+  targetEnv: prod
+
+# ─── Monitoring ───────────────────────────────────────────────────────────
+monitoring:
+  prometheus:
+    enabled: true
+    scrapeInterval: 15s
+    serviceMonitor:
+      enabled: true
+  grafana:
+    enabled: true
+    dashboard:
+      enabled: true

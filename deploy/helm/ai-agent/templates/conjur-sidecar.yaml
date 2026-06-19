@@ -1,0 +1,1 @@
+# Conjur sidecar configuration — integrated directly in templates/deployment.yaml to prevent standalone deployment lint errors.
