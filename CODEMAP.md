@@ -104,6 +104,7 @@
 | ⭐ USPTO patent application | `docs/US-PATENT-APPLICATION.md` |
 | ⭐ Technical patent disclosure | `docs/PATENT-DISCLOSURE.md` |
 | ⭐ ZT Architecture & 152 ZTOM Controls | `docs/ARCHITECTURE-RECOMMENDATIONS-ZT.md` |
+| ⭐ Agile Timeline & Multi-Project Roadmap | `docs/AGILE-TIMELINE-ROADMAP.md` |
 | Governance agent architecture | `docs/GOVERNANCE-AGENT-ARCHITECTURE.md` |
 | Token efficiency guide | `docs/TOKEN-EFFICIENT-IMPLEMENTATION.md` |
 | Unified framework v3.0 | `UNIFIED-AI-AGENT-GOVERNANCE-FRAMEWORK-v3.0.md` |
