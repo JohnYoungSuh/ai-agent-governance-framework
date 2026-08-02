@@ -123,10 +123,8 @@
 | Testing strategy | `.agents/rules/testing.md` |
 | Post-session validation checklist | `.agents/rules/post-goal-validation.md` |
 | Project source map | `.agents/rules/project-knowledge.md` |
-| IDE-agnostic rules | `.agents/rules/ide-rules.md` |
+| Hard constraints & invariants | `.agents/rules/constraints.md` |
+| Agent persona matrix | `.agents/rules/personas.md` |
 | QA/Tester Agent role | `.agents/rules/qa-tester-role.md` |
 | Project context prompt | `.agents/rules/project-context.md` |
 | Project context template | `.agents/rules/template-project-context.md` |
-| ⭐ Root cause playbooks | `LESSONS_LEARNED.md` |
-| ⭐ Current backlog | `NEXT_RELEASE_TODO.md` |
-| 60-second orientation | `SESSION_START.md` |
