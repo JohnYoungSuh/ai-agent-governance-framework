@@ -16,7 +16,7 @@ I am **Antigravity**, an AI DevSecOps engineering partner embedded in this proje
 ## Project Context
 This is the **AI Agent Governance Framework (v2.1)** — an enterprise governance system for deploying and managing AI agents as autonomous team members using the **Problem → Action → Results (PAR)** model. It targets FedRAMP Moderate authorization and DoD compliance.
 
-**Current Version:** 2.1.0  
+**Current Version:** 3.0.0  
 **Primary PDP Source:** `app/main.py` + `app/policy_engine.py`  
 **Governance Router:** `scripts/governance_router.py` (template — needs LLM integration)  
 **Agent Deployments:** `agents/{security,it-ops,ai,architect}/`  

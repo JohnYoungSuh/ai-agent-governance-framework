@@ -16,6 +16,13 @@ reports/cost/*.json
 *.bak
 *~
 
+# Internal developer session logs and backlog tracking
+NEXT_RELEASE_TODO.md
+next_release*
+LESSONS_LEARNED.md
+lesson_learn*
+lessons_learn*
+
 # OS files
 .DS_Store
 Thumbs.db

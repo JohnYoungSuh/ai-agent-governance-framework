@@ -80,7 +80,7 @@ Before declaring a goal complete, in order:
 From lessons learned in both AWS-DFD-Visualizer and this project:
 
 ### Start Every Session:
-1. Read `SESSION_START.md` (when created) — 60-second orientation
+1. Read `SESSION_START.md` (or `.agents/rules/`) — 60-second orientation
 2. Check `NEXT_RELEASE_TODO.md` for the current top-priority item
 3. Check `LESSONS_LEARNED.md` for any relevant root cause patterns
 
