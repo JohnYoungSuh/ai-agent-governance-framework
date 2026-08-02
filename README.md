@@ -1,24 +1,30 @@
-# AI Agent Governance Framework - Internal v2.1
+# AI Agent Governance Framework — v3.0.0
 
 A comprehensive, risk-based framework for deploying, governing, and managing AI agents as autonomous team members using the **Problem → Action → Results (PAR)** model.
-
-**Internal Repository**: This is a private fork customized for internal use.
 
 ## 🎯 Overview
 
 This framework enables organizations to:
-- Deploy AI agents with clear governance and accountability
+- Deploy AI agents with clear governance, non-root container isolation, and tier-based authority
+- **Enforce 100% capability alignment across the 7 Pillars of the DoD Zero Trust Overlay Model (152 ZTOM Controls)**
 - **Identify and mitigate 18 AI-specific risks systematically**
 - **Conduct STRIDE-based threat modeling for production agents**
-- **Achieve regulatory compliance** (FedRAMP, NIST 800-53, SOC 2, ISO 27001)
-- Manage costs and ROI with real-time monitoring
-- Maintain security, compliance, and comprehensive audit trails
-- **Monitor agent operations with OpenTelemetry observability**
-- Scale AI operations with human oversight
+- **Achieve regulatory compliance** (FedRAMP Moderate, NIST 800-53 Rev 5, SOC 2, DoD IL5)
+- **Generate automated eMASS compliance packages** (**SSP**, **SAP**, **PPSM**, **POA&M**)
+- Maintain security, compliance, and cryptographic audit trails via **Atomic Governance Transactions (AGT)**
+- **Monitor agent operations with OpenTelemetry (OCSF) observability**
 
-## 🆕 What's New in v2.1
+## 🆕 What's New in v3.0.0
 
-Version 2.1 introduces enterprise-grade compliance, production deployment options, and structured governance:
+Version 3.0.0 introduces production-hardened PDP kernel services, Zero Trust application pod provisioning, and automated IP boundary protection:
+
+### Governance Kernel & PDP Hardening (v3.0)
+- **GPIS PDP Production Endpoint**: Hardened `/api/v1/authorize` endpoint with rate-limiting, Pydantic input validation, and `GET /health` & `GET /ready` probes.
+- **Signed JWT Tier Claims**: Downstream permission tokens now carry `tier`, `namespace`, `jira_cr_id`, and `budget_status` with `GET /api/v1/verify` validation.
+- **P0 Security Resolutions**: Enforced `GPIS_JWT_SECRET` environment variables ([SEC-001](file:///home/suhlabs/projects/suhlabs/ai-agent-governance-framework/NEXT_RELEASE_TODO.md#L20)) and resolved CVE emergency patch policy logic ambiguity ([SEC-002](file:///home/suhlabs/projects/suhlabs/ai-agent-governance-framework/NEXT_RELEASE_TODO.md#L31)).
+- **DoD ZTOM 152 Controls Specification**: Complete 7-pillar capability mapping in [docs/ARCHITECTURE-RECOMMENDATIONS-ZT.md](file:///home/suhlabs/projects/suhlabs/ai-agent-governance-framework/docs/ARCHITECTURE-RECOMMENDATIONS-ZT.md).
+- **IP Boundary Release Exporter**: Automated release bundler (`scripts/export-external-sdk.sh`) with pre-release secret audit scanning.
+- **Hardened K8s Container Specs**: Multi-stage `app/Dockerfile` for GPIS PDP and standardized non-root `UID 65534` container image builds.
 
 ### Core Framework (v2.0)
 - **Risk Catalog**: 18 AI-specific risks with scoring and detection methods

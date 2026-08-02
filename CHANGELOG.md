@@ -5,6 +5,22 @@ All notable changes to the token-efficient governance implementation will be doc
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-08-02
+
+### Added & Hardened — Production Governance PDP & Zero Trust Architecture
+
+#### Security & Policy Decision Point
+- **Enforced JWT Secrets**: Removed hardcoded secret strings, requiring `os.getenv("GPIS_JWT_SECRET")` with startup assertions ([SEC-001](file:///home/suhlabs/projects/suhlabs/ai-agent-governance-framework/NEXT_RELEASE_TODO.md#L20)).
+- **CVE Emergency Patch Guard**: Resolved CVE policy logic ambiguity in `evaluate_security_patch_deployment()` requiring `action: emergency_patch` for critical CVE approvals ([SEC-002](file:///home/suhlabs/projects/suhlabs/ai-agent-governance-framework/NEXT_RELEASE_TODO.md#L31)).
+- **PDP Probes & Verification**: Added `GET /health`, `GET /ready`, and `GET /api/v1/verify` endpoints to `app/main.py`.
+- **Signed JWT Tier Claims**: Included `tier`, `namespace`, `guardrails_enforced`, `jira_cr_id`, and `budget_status` in token payloads.
+
+#### Architecture & Release Tooling
+- **DoD ZTOM 152 Controls Specification**: Created `docs/ARCHITECTURE-RECOMMENDATIONS-ZT.md` mapping ZT Pod provisioning, 152 ZTOM controls across 7 pillars, and eMASS package generation (**SSP**, **SAP**, **PPSM**, **POA&M**).
+- **IP Boundary Exporter**: Created `scripts/export-external-sdk.sh` for exporting proven external SDK bundles (112 files) with pre-release secret audit scanning.
+- **Container Hardening**: Created multi-stage `app/Dockerfile` for GPIS PDP and standardized all agent Dockerfiles on non-root `UID 65534` (`nobody`).
+- **Token Protection**: Created `.agentignore` to exclude build artifacts, venvs, and coverage logs.
+
 ---
 
 ## [1.0.0] - 2025-10-25
