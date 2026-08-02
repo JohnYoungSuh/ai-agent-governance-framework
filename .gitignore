@@ -26,10 +26,11 @@ Thumbs.db
 *.swp
 *.swo
 
-# Temporary files
+# Temporary files & distribution build bundles
 tmp/
 temp/
 *.tmp
+dist/
 
 # Credentials and secrets
 secrets/

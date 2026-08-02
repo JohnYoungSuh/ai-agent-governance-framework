@@ -53,6 +53,11 @@ Whenever a new capability, compliance control, or production deployment is compl
 - Target: ≥70% token reduction in conservative scenario
 - If GovernanceRouter was changed: verify cache hit rate calculation is correct
 
+### 9. Docker Container, Volume & Image Cleanup
+- **Container Hygiene**: Automatically stop and remove all temporary test containers (`docker rm -f <test-container>`).
+- **Build Cache Prune**: Execute `docker builder prune -f` after container builds to reclaim multi-GB build cache.
+- **Dangling Artifact Prune**: Remove unused dangling images (`docker image prune -f`) and orphan volumes (`docker volume prune -f`).
+
 ---
 
 ## 🚀 Execution Loop & Hygiene Verification

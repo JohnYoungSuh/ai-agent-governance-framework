@@ -1,46 +1,34 @@
-# Architect Agent Dockerfile
-# Tier 4 - System design and architectural decisions
+# ==============================================================================
+# Architect Agent Dockerfile (Tier 4 - Enterprise Systems Architect)
+# ==============================================================================
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     graphviz \
     plantuml \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
 COPY agents/architect/docker/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy agent source code
 COPY agents/architect/src/ /app/src/
+COPY policies/ /app/policies/
 
-# Copy framework policies and configurations
-COPY framework/policies/ /app/framework/policies/
-COPY framework/frameworks/ /app/framework/frameworks/
-
-# Create non-root user
-RUN useradd -m -u 1000 architect-agent && \
-    chown -R architect-agent:architect-agent /app
-
-# Create data directories
+# Permissions for non-root user (UID 65534)
 RUN mkdir -p /var/design-artifacts /var/design-artifacts/diagrams /var/design-artifacts/adr /tmp && \
-    chown -R architect-agent:architect-agent /var/design-artifacts /tmp
+    chown -R 65534:65534 /app /var/design-artifacts /tmp
 
-USER architect-agent
+USER 65534
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8080/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
-# Expose ports
 EXPOSE 8080 9090
 
-# Long-running API server
 CMD ["python", "-m", "src.handlers.api_server"]

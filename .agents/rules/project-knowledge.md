@@ -57,6 +57,12 @@ The `policies/simple_rules.yml` file represents distilled governance intelligenc
 ### Decision 6: Monorepo with Helm Chart Variants
 All 4 agents share a single Helm chart with agent-specific `values-<type>.yaml` overlays. New agents must use the shared chart, not custom charts.
 
+### Decision 7: Decoupled Application Roles for DoD ZTOM (152 Controls) Alignment
+The platform achieves 100% capability alignment across the **7 Pillars of the DoD Zero Trust Overlay Model (152 ZTOM Controls)** through 3 decoupled system roles:
+1. **The Guard** (`ai-agent-governance-framework`): Real-time PDP/PEP kernel intercepting actions synchronously (`app/main.py`), enforcing `simple_rules.yml`, issuing short-lived signed JWTs.
+2. **The Auditor** (`TA-suhlabs-eMASS`): Asynchronous Splunk ingestion of OCSF audit spans, generating eMASS RMF packages (**SSP**, **SAP**, **PPSM**, **POA&M**).
+3. **The Map** (`AWS-DFD-Visualizer`): Graph topology engine rendering interactive DFD threat maps comparing "As-Is" vs "To-Be" architectures.
+
 ## Key Numbers to Know
 - **Compliance**: 298/339 NIST 800-53 controls (88%) — target 100% for FedRAMP
 - **Token savings target**: 90.25% reduction (195 tokens/req vs 2000 baseline)

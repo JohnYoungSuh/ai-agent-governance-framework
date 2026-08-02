@@ -1,45 +1,33 @@
-# AI Agent Dockerfile
-# Tier 3 - AI/ML model training and deployment
+# ==============================================================================
+# AI Agent Dockerfile (Tier 2 - Model Operator)
+# ==============================================================================
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
 COPY agents/ai/docker/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy agent source code
 COPY agents/ai/src/ /app/src/
+COPY policies/ /app/policies/
 
-# Copy framework policies and configurations
-COPY framework/policies/ /app/framework/policies/
-COPY framework/frameworks/ /app/framework/frameworks/
-
-# Create non-root user
-RUN useradd -m -u 1000 ai-agent && \
-    chown -R ai-agent:ai-agent /app
-
-# Create data directories
+# Permissions for non-root user (UID 65534)
 RUN mkdir -p /var/ml-data /var/ml-data/models /var/ml-data/datasets /var/ml-data/checkpoints /tmp && \
-    chown -R ai-agent:ai-agent /var/ml-data /tmp
+    chown -R 65534:65534 /app /var/ml-data /tmp
 
-USER ai-agent
+USER 65534
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8080/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
-# Expose ports
 EXPOSE 8080 9090
 
-# Default command (training job)
 CMD ["python", "-m", "src.handlers.training_job"]

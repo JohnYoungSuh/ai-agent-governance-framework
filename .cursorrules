@@ -40,6 +40,7 @@
 - Schema validation: `pytest tests/compliance/ -v` → 0 failures
 - SIEM validation: `./scripts/test-siem-emitter.sh` → 10/10 pass
 - Token benchmark: `python3 scripts/benchmark_token_savings.py --format json` → ≥70% savings
+- Docker cleanup: Always remove test containers (`docker rm -f`) and run `docker builder prune -f` after container builds to prevent disk leaks
 
 ---
 
@@ -47,6 +48,6 @@
 
 | File | Issue |
 |------|-------|
-| `app/main.py:11` | Hardcoded JWT secret |
+| `app/main.py:17` | JWT secret env var enforced (SEC-001 fixed) |
 | `app/policy_engine.py:30` | CVE > 9.0 → APPROVED ambiguity |
 | `scripts/governance_router.py` | LLM clients are mock stubs |

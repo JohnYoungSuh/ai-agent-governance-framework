@@ -1,0 +1,44 @@
+# .agentignore — Files the AI agent must NEVER read
+# These are built artifacts, virtual environments, compiled files, and logs.
+# Reading them wastes tokens with zero useful signal.
+
+# ============================================================
+# BUILT BUNDLES & DISTRIBUTION (auto-generated)
+# ============================================================
+dist/
+build/
+*.egg-info/
+*.tar.gz
+*.zip
+*.spl
+
+# ============================================================
+# PYTHON VIRTUAL ENVIRONMENT & CACHES
+# ============================================================
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+test-output/
+
+# ============================================================
+# BINARY & MEDIA ASSETS
+# ============================================================
+*.png
+*.webp
+*.jpg
+*.jpeg
+*.ico
+*.pdf
+
+# ============================================================
+# GIT & LOCAL IDE STATE
+# ============================================================
+.git/
+.idea/
+.vscode/

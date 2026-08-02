@@ -13,6 +13,11 @@ trigger: always_on
 - Add `detect-secrets` or TruffleHog to pre-commit hooks (see LL-001)
 - Any secret ever committed to Git history MUST be rotated — changing the code alone is insufficient
 
+### IP Boundary Protection & Release Sanitization
+- **INTERNAL (Trade Secret / Conceptual IP)**: Unproven algorithms (game theory), proprietary distillation prompts (`scripts/prompts/distillation.txt`), pre-patent disclosures (`docs/*PATENT*`), internal engineering backlogs (`NEXT_RELEASE_TODO.md`). Must NEVER be exported to public/client SDKs.
+- **EXTERNAL (Proven Framework)**: Standardized schemas (`audit-trail.json`), FastAPI PDP server (`app/main.py`), Helm charts (`deploy/helm/ai-agent/`), OCSF SIEM emitter, and pytest suites.
+- **Export Gate**: All releases must run `./scripts/export-external-sdk.sh` with 0 security scanner warnings before distribution.
+
 ### Input Validation Rules (OWASP LLM Top 10 — Prompt Injection)
 ```python
 # All GPIS inputs must be validated before processing:

@@ -17,7 +17,7 @@ def run_kill_switch_validation():
     print("=== Starting Kill Switch Lifecycle Validation ===")
     
     # Ensure environment variables are set
-    os.environ["GPIS_JWT_SECRET"] = "suhlabs-super-secret-governance-key"
+    os.environ["GPIS_JWT_SECRET"] = "dev-gpis-jwt-secret-key-change-in-prod"
     client = TestClient(app)
     
     agent_id = "security-agent"

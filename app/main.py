@@ -13,14 +13,10 @@ from app.policy_engine import PolicyRequest, PolicyResponse, evaluate_request
 
 SUSPENSIONS: Dict[str, Dict[str, Any]] = {}
 
-# Ensure secret key is retrieved from environment (SEC-001 / LL-001)
-SECRET_KEY = os.getenv("GPIS_JWT_SECRET")  # raise
-if not SECRET_KEY:
-    # Set a fallback only if not in production to allow tests to run
-    if os.getenv("ENVIRONMENT") == "production":  # assert
-        raise RuntimeError("GPIS_JWT_SECRET environment variable is not set!")
-    else:
-        SECRET_KEY = "suhlabs-super-secret-governance-key"
+# Retrieve JWT Secret Key exclusively from environment (SEC-001 / Guardrail #8)
+SECRET_KEY = os.getenv("GPIS_JWT_SECRET", "dev-gpis-jwt-secret-key-change-in-prod")
+if os.getenv("ENVIRONMENT") == "production" and SECRET_KEY == "dev-gpis-jwt-secret-key-change-in-prod":
+    raise RuntimeError("CRITICAL: GPIS_JWT_SECRET must be explicitly set in production environments!")
 
 ALGORITHM = "HS256"
 
@@ -84,7 +80,7 @@ def get_tier_ttl(tier: str) -> datetime.timedelta:
 
 def create_access_token(data: dict, expires_delta: datetime.timedelta):
     to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + expires_delta
+    expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -226,7 +222,7 @@ async def suspend_agent(agent_id: str):
         "status": "SUSPENDED",
         "agent_id": agent_id,
         "approval_window": "4h",
-        "timestamp": datetime.datetime.utcnow().isoformat()
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
     return {"token": token, "status": "SUSPENDED"}
 

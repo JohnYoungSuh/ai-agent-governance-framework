@@ -14,6 +14,11 @@ Every code change must follow this sequence — no exceptions:
 6. **Push** → let GitHub Actions CI be the final validation signal
 7. **Verify CI**: green pipeline = the authoritative "done" signal
 
+## 3-Tier Hardware Testing Strategy
+- **Tier 1: Inner-Loop Dev (HP Dragonfly G4)** — Local development, unit/compliance tests (`pytest`), fast `k3d` (K3s in Docker) iterations.
+- **Tier 2: Local GPU Inference Lab (Dell XPS 9500)** — NVIDIA GPU running Ollama / vLLM (`qwen2.5-coder:7b`) for zero-cost offline intent routing validation.
+- **Tier 3: Bare-Metal Staging Lab (4x Dell OptiPlex 7040 Cluster)** — Proxmox VE 8.x running 4-node K3s cluster for multi-node NetworkPolicy/PPSM testing and eMASS package verification.
+
 ## Bug Fix Workflow
 1. Open `NEXT_RELEASE_TODO.md` — pick the topmost unchecked item by priority (🔴 → 🏛️ → 🟡 → 🟢 → 🔵)
 2. Check `LESSONS_LEARNED.md` — does this match a known root cause pattern?

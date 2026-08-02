@@ -1,53 +1,45 @@
-# Security Agent Dockerfile
-# Tier 3 - Security scanning and compliance checking
+# ==============================================================================
+# Security Agent Dockerfile (Tier 2 - Vulnerability & Patch Operator)
+# ==============================================================================
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies for security tools
-RUN apt-get update && apt-get install -y \
+# Install system dependencies & Trivy vulnerability scanner
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
     git \
     jq \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Trivy (vulnerability scanner)
-RUN wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | apt-key add - && \
-    echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | tee -a /etc/apt/sources.list.d/trivy.list && \
+# Install Trivy
+RUN wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor -o /usr/share/keyrings/trivy.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | tee /etc/apt/sources.list.d/trivy.list && \
     apt-get update && \
-    apt-get install -y trivy && \
+    apt-get install -y --no-install-recommends trivy && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Copy requirements first for build caching
 COPY agents/security/docker/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy agent source code
+# Copy agent source code and policies
 COPY agents/security/src/ /app/src/
+COPY policies/ /app/policies/
 
-# Copy framework policies and configurations
-COPY framework/policies/ /app/framework/policies/
-COPY framework/frameworks/ /app/framework/frameworks/
-
-# Create non-root user
-RUN useradd -m -u 1000 security-agent && \
-    chown -R security-agent:security-agent /app
-
-# Create data directories
+# Data directory permissions for non-root user (UID 65534)
 RUN mkdir -p /var/scan-results /tmp && \
-    chown -R security-agent:security-agent /var/scan-results /tmp
+    chown -R 65534:65534 /app /var/scan-results /tmp
 
-USER security-agent
+USER 65534
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8080/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
-# Expose ports
 EXPOSE 8080 9090
 
-# Default command (can be overridden for CronJob vs Deployment)
 CMD ["python", "-m", "src.handlers.api_server"]

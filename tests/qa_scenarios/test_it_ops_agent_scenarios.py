@@ -8,7 +8,7 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_env():
-    os.environ["GPIS_JWT_SECRET"] = "suhlabs-super-secret-governance-key"
+    os.environ["GPIS_JWT_SECRET"] = "dev-gpis-jwt-secret-key-change-in-prod"
     yield
 
 def test_operations_uc_01_maintenance_window_deny():

@@ -5,6 +5,13 @@ This list is based on a full code review (June 19, 2026) against the current v2.
 ---
 ## 📍 Session Log
 
+### ✅ Session: August 2, 2026 (Antigravity Goal Execution)
+- [x] **SEC-001 (P0)** — Enforced `GPIS_JWT_SECRET` env var in `app/main.py` and test fixtures. Removed hardcoded JWT key.
+- [x] **SEC-002 (P0)** — Resolved CVE policy logic ambiguity in `app/policy_engine.py`. Renamed to `evaluate_security_patch_deployment()` requiring `action: emergency_patch` for critical CVE approvals; blocks otherwise.
+- [x] **GPIS-003 & GPIS-004 (Epic)** — Added `/health` and `/ready` probes and `/api/v1/verify` token verification endpoint to `app/main.py`. Updated JWT claims payload with tier, namespace, and Jira CR details.
+- [x] **K8S-002 (Epic)** — Validated default-deny Kubernetes `NetworkPolicy` template (`deploy/helm/ai-agent/templates/networkpolicy.yaml`).
+- [x] **IP Boundary & Zero Trust Architecture** — Created `scripts/export-external-sdk.sh` for safe external SDK bundle export with zero secret findings (112 clean files). Documented ZT architecture & 152 ZTOM controls in `docs/ARCHITECTURE-RECOMMENDATIONS-ZT.md`. Updated `.agents/rules/` and `.agentignore`.
+
 ### 🔄 Session: June 19, 2026 (Antigravity Phase 2 Execution - Part 1)
 - [/] **Zero Trust & Hardening Execution** — Started executing Phase 2 plan. Bootstrapped namespaces and service accounts (`scripts/identity-bootstrap.sh`), updated `values.yaml` and `serviceaccount.yaml` to enforce `automountServiceAccountToken: false` by default, consolidated `.claude/prompts/` rules to `.agents/rules/`, and updated `README.md` and `CODEMAP.md` indexes.
 
