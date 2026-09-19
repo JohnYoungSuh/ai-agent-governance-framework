@@ -12,7 +12,8 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def setup_env():
     # Ensure GPIS_JWT_SECRET is set for the duration of tests
-    os.environ["GPIS_JWT_SECRET"] = "dev-gpis-jwt-secret-key-change-in-prod"
+    os.environ["GPIS_JWT_SECRET"] = os.environ.get("GPIS_JWT_SECRET", "test-gpis-jwt-secret-ci-only")
+    os.environ["GPIS_ADMIN_API_KEY"] = os.environ.get("GPIS_ADMIN_API_KEY", "test-gpis-admin-key-ci-only")
     yield
 
 def test_security_uc_01_emergency_patch_allow():

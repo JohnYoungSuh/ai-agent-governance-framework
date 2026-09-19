@@ -7,17 +7,20 @@ Validates: suspend (automated) -> block new requests -> approve (human PA) -> re
 import sys
 import os
 
-# Set python path to find app package
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+os.environ["GPIS_JWT_SECRET"] = "test-gpis-jwt-secret-ci-only"
+os.environ["GPIS_ADMIN_API_KEY"] = "test-gpis-admin-key-ci-only"
+os.environ.setdefault("GPIS_AUDIT_DIR", "/tmp/gpis-audit-tests")
 
 from fastapi.testclient import TestClient
 from app.main import app, SUSPENSIONS
 
+ADMIN_HEADERS = {"X-GPIS-Admin-Key": os.environ["GPIS_ADMIN_API_KEY"]}
+
 def run_kill_switch_validation():
     print("=== Starting Kill Switch Lifecycle Validation ===")
-    
-    # Ensure environment variables are set
-    os.environ["GPIS_JWT_SECRET"] = "dev-gpis-jwt-secret-key-change-in-prod"
+
     client = TestClient(app)
     
     agent_id = "security-agent"
@@ -45,7 +48,7 @@ def run_kill_switch_validation():
     
     # 2. Trigger automated suspension
     print("Step 2: Triggering automated agent suspension...")
-    res_sus = client.post(f"/admin/v1/suspend/{agent_id}")
+    res_sus = client.post(f"/admin/v1/suspend/{agent_id}", headers=ADMIN_HEADERS)
     if res_sus.status_code != 200:
         print(f"[-] Suspend call failed: {res_sus.status_code} - {res_sus.text}")
         sys.exit(1)
@@ -69,7 +72,7 @@ def run_kill_switch_validation():
         
     # 4. Approve suspension (Simulating Human PA sign-off)
     print("Step 4: Approving suspension (simulating Human PA)...")
-    res_app = client.post(f"/admin/v1/approve/{susp_token}")
+    res_app = client.post(f"/admin/v1/approve/{susp_token}", headers=ADMIN_HEADERS)
     if res_app.status_code != 200:
         print(f"[-] Approve call failed: {res_app.status_code}")
         sys.exit(1)

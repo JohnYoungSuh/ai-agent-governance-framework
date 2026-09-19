@@ -17,7 +17,10 @@ COPY agents/ai/docker/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY agents/ai/src/ /app/src/
+COPY agents/shared/ /app/shared/
 COPY policies/ /app/policies/
+
+ENV PYTHONPATH=/app:/app/shared
 
 # Permissions for non-root user (UID 65534)
 RUN mkdir -p /var/ml-data /var/ml-data/models /var/ml-data/datasets /var/ml-data/checkpoints /tmp && \

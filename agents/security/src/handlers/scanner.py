@@ -7,7 +7,15 @@ import os
 import logging
 import sys
 from datetime import datetime
+from pathlib import Path
 import yaml
+
+_shared = Path("/app/shared")
+if _shared.is_dir():
+    sys.path.insert(0, str(_shared))
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "shared"))
+from gpis_client import GpisAuthorizationError, require_gpis_token
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,6 +30,27 @@ def run_scan():
     logger.info(f"Timestamp: {datetime.utcnow().isoformat()}")
     logger.info(f"Agent Tier: {os.getenv('AGENT_TIER', '3')}")
     logger.info("=" * 60)
+
+    namespace = os.getenv("AGENT_NAMESPACE", "dev")
+    tier_raw = os.getenv("AGENT_TIER", "3")
+    agent_tier = f"tier{tier_raw}" if str(tier_raw).isdigit() else str(tier_raw)
+    payload = {
+        "subcategory": "config",
+        "risk_level": "low",
+        "namespace": namespace,
+        "allowed_namespace": namespace,
+        "agent_tier": agent_tier,
+        "contains_pii": False,
+        "contains_secrets": False,
+    }
+    if agent_tier in ("tier3", "tier4"):
+        payload["jira_cr_id"] = os.getenv("JIRA_CR_ID", "")
+    try:
+        token = require_gpis_token("security-agent", "ACCESS", payload)
+        logger.info("GPIS authorized scheduled scan (token prefix=%s)", token[:12])
+    except GpisAuthorizationError as exc:
+        logger.error("GPIS denied scheduled scan: %s", exc)
+        return 1
 
     try:
         # Load configuration

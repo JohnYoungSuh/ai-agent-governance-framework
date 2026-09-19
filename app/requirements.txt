@@ -5,3 +5,4 @@ pyjwt
 slowapi
 pyyaml
 requests
+jsonschema

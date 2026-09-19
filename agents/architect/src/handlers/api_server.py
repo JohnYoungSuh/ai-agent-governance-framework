@@ -4,13 +4,22 @@ Tier 4: System design and architectural decisions
 """
 
 import os
+import sys
 import logging
 from datetime import datetime
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
 import yaml
+
+_shared = Path("/app/shared")
+if _shared.is_dir():
+    sys.path.insert(0, str(_shared))
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "shared"))
+from gpis_client import GpisAuthorizationError, require_gpis_token
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +47,18 @@ class ReviewRequest(BaseModel):
     review_type: str  # design-review, code-review, security-review
     artifact_url: str
     priority: str = "normal"
+
+
+def _agent_tier() -> str:
+    raw = os.getenv("AGENT_TIER", "4")
+    return f"tier{raw}" if str(raw).isdigit() else str(raw)
+
+
+def _authorize_or_raise(category: str, payload: dict) -> str:
+    try:
+        return require_gpis_token("architect-agent", category, payload)
+    except GpisAuthorizationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 @app.on_startup
 async def startup_event():
@@ -71,7 +92,16 @@ async def startup_probe():
 
 @app.post("/design")
 async def create_design(request: DesignRequest):
-    """Create system design"""
+    """Create system design. Requires GPIS JWT."""
+    payload = {
+        "subcategory": "infrastructure",
+        "risk_level": "high",
+        "namespace": "dev",
+        "agent_tier": _agent_tier(),
+        "jira_cr_id": os.getenv("JIRA_CR_ID", ""),
+        "cost_estimate": 50,
+    }
+    _authorize_or_raise("CREATE", payload)
     design_requests.inc()
 
     logger.info(f"Creating {request.system_type} design")
@@ -89,7 +119,15 @@ async def create_design(request: DesignRequest):
 
 @app.post("/reviews")
 async def submit_review(request: ReviewRequest):
-    """Submit architectural review request"""
+    """Submit architectural review request. Requires GPIS JWT."""
+    payload = {
+        "subcategory": "policy_validation",
+        "risk_level": "low",
+        "namespace": os.getenv("AGENT_NAMESPACE", "dev"),
+        "agent_tier": _agent_tier(),
+        "jira_cr_id": os.getenv("JIRA_CR_ID", ""),
+    }
+    _authorize_or_raise("COMPLY", payload)
     review_requests.inc()
 
     logger.info(f"Reviewing {request.review_type}: {request.artifact_url}")

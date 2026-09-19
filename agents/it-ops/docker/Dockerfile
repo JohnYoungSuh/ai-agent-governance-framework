@@ -25,7 +25,10 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy agent source code and policies
 COPY agents/it-ops/src/ /app/src/
+COPY agents/shared/ /app/shared/
 COPY policies/ /app/policies/
+
+ENV PYTHONPATH=/app:/app/shared
 
 # Permissions for non-root user (UID 65534)
 RUN mkdir -p /var/ops-data /tmp && \

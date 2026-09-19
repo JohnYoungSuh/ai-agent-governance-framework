@@ -4,13 +4,23 @@ Tier 3: Security vulnerability scanning and compliance checking
 """
 
 import os
+import sys
 import logging
 from datetime import datetime
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
 import yaml
+
+_shared = Path("/app/shared")
+if _shared.is_dir():
+    sys.path.insert(0, str(_shared))
+else:
+    repo_shared = Path(__file__).resolve().parents[3] / "shared"
+    sys.path.insert(0, str(repo_shared))
+from gpis_client import GpisAuthorizationError, require_gpis_token
 
 # Configure logging
 logging.basicConfig(
@@ -42,6 +52,18 @@ class ScanResponse(BaseModel):
     target: str
     vulnerabilities: dict
     timestamp: str
+
+
+def _agent_tier() -> str:
+    raw = os.getenv("AGENT_TIER", "2")
+    return f"tier{raw}" if str(raw).isdigit() else str(raw)
+
+
+def _authorize_or_raise(category: str, payload: dict) -> str:
+    try:
+        return require_gpis_token("security-agent", category, payload)
+    except GpisAuthorizationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 @app.on_startup
 async def startup_event():
@@ -86,8 +108,23 @@ async def startup_probe():
 
 @app.post("/scan", response_model=ScanResponse)
 async def trigger_scan(request: ScanRequest):
-    """Trigger a security scan"""
+    """Trigger a security scan. Requires a GPIS JWT first."""
+    namespace = os.getenv("AGENT_NAMESPACE", "dev")
+    payload = {
+        "subcategory": "config",
+        "risk_level": "low",
+        "namespace": namespace,
+        "allowed_namespace": namespace,
+        "agent_tier": _agent_tier(),
+        "contains_pii": False,
+        "contains_secrets": False,
+    }
+    if payload["agent_tier"] in ("tier3", "tier4"):
+        payload["jira_cr_id"] = os.getenv("JIRA_CR_ID", "")
+    token = _authorize_or_raise("ACCESS", payload)
+
     scan_requests.inc()
+    logger.info("GPIS authorized scan (token prefix=%s)", token[:12])
 
     logger.info(f"Triggering scan for {request.target} (type: {request.scan_type})")
 

@@ -106,6 +106,7 @@
 | ⭐ ZT Architecture & 152 ZTOM Controls | `docs/ARCHITECTURE-RECOMMENDATIONS-ZT.md` |
 | ⭐ Agile Timeline & Multi-Project Roadmap | `docs/AGILE-TIMELINE-ROADMAP.md` |
 | Governance agent architecture | `docs/GOVERNANCE-AGENT-ARCHITECTURE.md` |
+| SA dual-persona review (v3.0.1) | `docs/reviews/governance_review_3.0.1.md` |
 | Token efficiency guide | `docs/TOKEN-EFFICIENT-IMPLEMENTATION.md` |
 | Unified framework v3.0 | `UNIFIED-AI-AGENT-GOVERNANCE-FRAMEWORK-v3.0.md` |
 | 16 guardrail rules | `docs/GOVERNANCE_GUARDRAILS.md` |

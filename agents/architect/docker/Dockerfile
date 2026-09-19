@@ -18,7 +18,10 @@ COPY agents/architect/docker/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY agents/architect/src/ /app/src/
+COPY agents/shared/ /app/shared/
 COPY policies/ /app/policies/
+
+ENV PYTHONPATH=/app:/app/shared
 
 # Permissions for non-root user (UID 65534)
 RUN mkdir -p /var/design-artifacts /var/design-artifacts/diagrams /var/design-artifacts/adr /tmp && \

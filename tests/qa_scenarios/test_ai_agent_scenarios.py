@@ -8,7 +8,8 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_env():
-    os.environ["GPIS_JWT_SECRET"] = "dev-gpis-jwt-secret-key-change-in-prod"
+    os.environ["GPIS_JWT_SECRET"] = os.environ.get("GPIS_JWT_SECRET", "test-gpis-jwt-secret-ci-only")
+    os.environ["GPIS_ADMIN_API_KEY"] = os.environ.get("GPIS_ADMIN_API_KEY", "test-gpis-admin-key-ci-only")
     yield
 
 def test_ai_uc_01_training_job_dev_allowed():
@@ -23,7 +24,9 @@ def test_ai_uc_01_training_job_dev_allowed():
                 "risk_level": "medium",
                 "namespace": "dev",
                 "agent_tier": "tier3",  # CronJob running at Tier 3
-                "jira_cr_id": "CR-2026-1111"
+                "jira_cr_id": "CR-2026-1111",
+                "resource_quota_ok": True,
+                "labels": ["app", "env", "owner"],
             }
         }
     )

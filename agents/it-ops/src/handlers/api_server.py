@@ -4,13 +4,23 @@ Tier 3: IT operations automation and incident response
 """
 
 import os
+import sys
 import logging
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
 import yaml
+
+_shared = Path("/app/shared")
+if _shared.is_dir():
+    sys.path.insert(0, str(_shared))
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "shared"))
+from gpis_client import GpisAuthorizationError, require_gpis_token
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +48,20 @@ class DeploymentRequest(BaseModel):
     environment: str  # dev, staging, prod
     application: str
     version: str
+    commit_signed: bool = False
+    jira_cr_id: Optional[str] = None
+
+
+def _agent_tier() -> str:
+    raw = os.getenv("AGENT_TIER", "3")
+    return f"tier{raw}" if str(raw).isdigit() else str(raw)
+
+
+def _authorize_or_raise(category: str, payload: dict) -> str:
+    try:
+        return require_gpis_token("it-ops-agent", category, payload)
+    except GpisAuthorizationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 @app.on_startup
 async def startup_event():
@@ -71,7 +95,14 @@ async def startup_probe():
 
 @app.post("/incidents")
 async def handle_incident(request: IncidentRequest):
-    """Handle incident response"""
+    """Handle incident response. Requires GPIS JWT."""
+    payload = {
+        "hour": datetime.utcnow().hour,
+        "agent_tier": _agent_tier(),
+        "jira_cr_id": os.getenv("JIRA_CR_ID", ""),
+        "namespace": os.getenv("AGENT_NAMESPACE", "dev"),
+    }
+    _authorize_or_raise("OPERATIONS", payload)
     incident_requests.inc()
 
     logger.info(f"Handling {request.severity} incident: {request.description}")
@@ -89,7 +120,14 @@ async def handle_incident(request: IncidentRequest):
 
 @app.post("/deployments")
 async def trigger_deployment(request: DeploymentRequest):
-    """Trigger application deployment"""
+    """Trigger application deployment. Requires GPIS JWT."""
+    payload = {
+        "commit_signed": request.commit_signed,
+        "agent_tier": _agent_tier(),
+        "jira_cr_id": request.jira_cr_id or os.getenv("JIRA_CR_ID", ""),
+        "namespace": request.environment,
+    }
+    _authorize_or_raise("DEPLOYMENT", payload)
     deployment_requests.inc()
 
     logger.info(f"Deploying {request.application} v{request.version} to {request.environment}")

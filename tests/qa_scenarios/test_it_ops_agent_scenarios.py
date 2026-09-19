@@ -8,7 +8,8 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_env():
-    os.environ["GPIS_JWT_SECRET"] = "dev-gpis-jwt-secret-key-change-in-prod"
+    os.environ["GPIS_JWT_SECRET"] = os.environ.get("GPIS_JWT_SECRET", "test-gpis-jwt-secret-ci-only")
+    os.environ["GPIS_ADMIN_API_KEY"] = os.environ.get("GPIS_ADMIN_API_KEY", "test-gpis-admin-key-ci-only")
     yield
 
 def test_operations_uc_01_maintenance_window_deny():
@@ -88,7 +89,7 @@ def test_deployment_uc_03_deploy_without_jira_cr_deny():
 def test_ops_uc_04_hitl_suspension_lifecycle():
     """OPS-UC-04: HITL lifecycle: suspend -> approve -> status update"""
     # 1. Trigger suspend via admin API
-    res_sus = client.post("/admin/v1/suspend/it-ops-agent")
+    res_sus = client.post("/admin/v1/suspend/it-ops-agent", headers={"X-GPIS-Admin-Key": os.environ["GPIS_ADMIN_API_KEY"]})
     assert res_sus.status_code == 200
     sus_data = res_sus.json()
     token = sus_data["token"]
@@ -100,7 +101,7 @@ def test_ops_uc_04_hitl_suspension_lifecycle():
     assert res_stat.json()["status"] == "SUSPENDED"
 
     # 3. Approve suspension
-    res_app = client.post(f"/admin/v1/approve/{token}")
+    res_app = client.post(f"/admin/v1/approve/{token}", headers={"X-GPIS-Admin-Key": os.environ["GPIS_ADMIN_API_KEY"]})
     assert res_app.status_code == 200
     assert res_app.json()["status"] == "APPROVED"
 

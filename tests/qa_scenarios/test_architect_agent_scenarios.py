@@ -9,13 +9,14 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_env():
-    os.environ["GPIS_JWT_SECRET"] = "dev-gpis-jwt-secret-key-change-in-prod"
+    os.environ["GPIS_JWT_SECRET"] = os.environ.get("GPIS_JWT_SECRET", "test-gpis-jwt-secret-ci-only")
+    os.environ["GPIS_ADMIN_API_KEY"] = os.environ.get("GPIS_ADMIN_API_KEY", "test-gpis-admin-key-ci-only")
     yield
 
 def test_arch_uc_01_gpis_suspends_network_policy_modification():
     """ARCH-UC-01: NetworkPolicy modification request -> GPIS -> SUSPENDED"""
     # Trigger suspend via the admin API
-    response = client.post("/admin/v1/suspend/architect-agent")
+    response = client.post("/admin/v1/suspend/architect-agent", headers={"X-GPIS-Admin-Key": os.environ["GPIS_ADMIN_API_KEY"]})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "SUSPENDED"
@@ -24,11 +25,11 @@ def test_arch_uc_01_gpis_suspends_network_policy_modification():
 def test_arch_uc_02_resume_with_human_approver():
     """ARCH-UC-02: Valid Jira CR + human approver -> resume -> APPROVED"""
     # 1. Suspend
-    res_sus = client.post("/admin/v1/suspend/architect-agent")
+    res_sus = client.post("/admin/v1/suspend/architect-agent", headers={"X-GPIS-Admin-Key": os.environ["GPIS_ADMIN_API_KEY"]})
     token = res_sus.json()["token"]
 
     # 2. Approve suspension (simulating human approver signing off)
-    res_app = client.post(f"/admin/v1/approve/{token}")
+    res_app = client.post(f"/admin/v1/approve/{token}", headers={"X-GPIS-Admin-Key": os.environ["GPIS_ADMIN_API_KEY"]})
     assert res_app.status_code == 200
     assert res_app.json()["status"] == "APPROVED"
 
