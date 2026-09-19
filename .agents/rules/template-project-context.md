@@ -1,8 +1,8 @@
 # Project Context Template
 
 ## Instructions
-Copy this template to `.claude/prompts/project-context.md` in any new project.
-Customize the sections below to provide automatic framework context.
+Copy this template to `.agents/rules/project-context.md` in any new project.
+Customize the sections below to provide automatic framework context across Antigravity, Cursor, and Claude Code.
 
 ---
 

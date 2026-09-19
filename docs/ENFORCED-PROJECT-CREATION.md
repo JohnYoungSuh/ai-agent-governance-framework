@@ -68,34 +68,40 @@ Every project includes:
 
 ```
 project-name/
-├── .claude/
-│   ├── prompts/
-│   │   └── project-context.md    # Auto-loaded governance context
-│   ├── commands/                  # Custom slash commands
-│   └── settings.local.json        # Governance metadata + permissions
-├── src/                           # Application code
-├── tests/                         # Test files
-├── docs/                          # Documentation
-├── scripts/                       # Automation scripts
-├── config/                        # Configuration
-├── GOVERNANCE.md                  # Governance summary
-├── README.md                      # Project readme with governance
-└── .gitignore                     # Standard ignore rules
+├── .agents/                           # Canonical multi-agent governance
+│   ├── rules/
+│   │   └── project-context.md        # Canonical governance context
+│   └── skills/                        # Custom agent skills
+├── .cursorrules                       # Cursor IDE adapter
+├── .claude/                           # Claude Code CLI adapter
+│   └── settings.local.json            # Governance metadata & .agents/rules/ include
+├── src/                               # Application code
+├── tests/                             # Test files
+├── docs/                              # Documentation
+├── scripts/                           # Automation scripts
+├── config/                            # Configuration
+├── GOVERNANCE.md                      # Governance summary
+├── README.md                          # Project readme with governance
+└── .gitignore                         # Standard ignore rules
 ```
 
 #### 4. Mandatory Governance Files
 
-**`.claude/prompts/project-context.md`**
-- Project metadata
+**`.agents/rules/project-context.md`**
+- Canonical project metadata and constraints
 - Owner information
 - Agent tier requirements and restrictions
 - Required mitigations
 - Budget and cost controls
 - Compliance requirements
 - Audit and accountability rules
-- Auto-loaded when project opens in Claude Code
+- Automatically loaded across Antigravity IDE, Cursor, and Claude Code
+
+**`.cursorrules`**
+- Cursor IDE adapter referencing `.agents/rules/`
 
 **`.claude/settings.local.json`**
+- Imports `.agents/rules/*` for Claude Code CLI
 - Tier-appropriate permissions
 - Governance metadata (project name, owner, tier, budget, etc.)
 - Framework version tracking

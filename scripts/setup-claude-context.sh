@@ -1,30 +1,32 @@
 #!/bin/bash
 
-# Setup Claude Code auto-loading context for a new project
+# Setup Multi-Assistant AI Governance Context (.agents/, .cursorrules, .claude/)
 # Usage: ./setup-claude-context.sh [project-path]
 
 set -e
 
 PROJECT_PATH="${1:-.}"
+AGENTS_DIR="${PROJECT_PATH}/.agents"
+RULES_DIR="${AGENTS_DIR}/rules"
+SKILLS_DIR="${AGENTS_DIR}/skills"
 CLAUDE_DIR="${PROJECT_PATH}/.claude"
-PROMPTS_DIR="${CLAUDE_DIR}/prompts"
-COMMANDS_DIR="${CLAUDE_DIR}/commands"
 
-echo "Setting up Claude Code context for: ${PROJECT_PATH}"
+echo "Setting up Multi-Assistant AI Governance context for: ${PROJECT_PATH}"
 
 # Create directories
-mkdir -p "${PROMPTS_DIR}"
-mkdir -p "${COMMANDS_DIR}"
+mkdir -p "${RULES_DIR}"
+mkdir -p "${SKILLS_DIR}"
+mkdir -p "${CLAUDE_DIR}"
 
 # Copy template if project-context.md doesn't exist
-if [ ! -f "${PROMPTS_DIR}/project-context.md" ]; then
-    if [ -f "$(dirname "$0")/../.claude/prompts/template-project-context.md" ]; then
-        cp "$(dirname "$0")/../.claude/prompts/template-project-context.md" \
-           "${PROMPTS_DIR}/project-context.md"
-        echo "✓ Created ${PROMPTS_DIR}/project-context.md from template"
+if [ ! -f "${RULES_DIR}/project-context.md" ]; then
+    TEMPLATE_SOURCE="$(dirname "$0")/../.agents/rules/template-project-context.md"
+    if [ -f "${TEMPLATE_SOURCE}" ]; then
+        cp "${TEMPLATE_SOURCE}" "${RULES_DIR}/project-context.md"
+        echo "✓ Created ${RULES_DIR}/project-context.md from template"
         echo "  → Edit this file to customize your project context"
     else
-        cat > "${PROMPTS_DIR}/project-context.md" << 'EOF'
+        cat > "${RULES_DIR}/project-context.md" << 'EOF'
 # Project Context
 
 ## Project Overview
@@ -54,17 +56,30 @@ if [ ! -f "${PROMPTS_DIR}/project-context.md" ]; then
 - Testing: [requirements]
 - Review process: [workflow]
 EOF
-        echo "✓ Created ${PROMPTS_DIR}/project-context.md with basic template"
+        echo "✓ Created ${RULES_DIR}/project-context.md with basic template"
         echo "  → Edit this file to add your project details"
     fi
 else
-    echo "✓ ${PROMPTS_DIR}/project-context.md already exists"
+    echo "✓ ${RULES_DIR}/project-context.md already exists"
 fi
 
-# Create settings.local.json if it doesn't exist
+# Create .cursorrules adapter if it doesn't exist
+if [ ! -f "${PROJECT_PATH}/.cursorrules" ]; then
+    cat > "${PROJECT_PATH}/.cursorrules" << 'EOF'
+# Cursor Rules — AI Agent Governance Framework
+# Canonical governance rules reside in .agents/rules/
+# See .agents/rules/project-context.md for project overview and agent constraints.
+EOF
+    echo "✓ Created ${PROJECT_PATH}/.cursorrules adapter"
+fi
+
+# Create settings.local.json with include if it doesn't exist
 if [ ! -f "${CLAUDE_DIR}/settings.local.json" ]; then
     cat > "${CLAUDE_DIR}/settings.local.json" << 'EOF'
 {
+  "include": [
+    ".agents/rules/*"
+  ],
   "permissions": {
     "allow": [],
     "deny": [],
@@ -72,18 +87,21 @@ if [ ! -f "${CLAUDE_DIR}/settings.local.json" ]; then
   }
 }
 EOF
-    echo "✓ Created ${CLAUDE_DIR}/settings.local.json"
-    echo "  → Add permission rules as needed"
+    echo "✓ Created ${CLAUDE_DIR}/settings.local.json importing .agents/rules/*"
 else
     echo "✓ ${CLAUDE_DIR}/settings.local.json already exists"
 fi
 
 echo ""
-echo "✅ Claude Code context setup complete!"
+echo "✅ Multi-Assistant context setup complete!"
 echo ""
 echo "Next steps:"
-echo "1. Edit ${PROMPTS_DIR}/project-context.md to describe your project"
-echo "2. (Optional) Add custom commands to ${COMMANDS_DIR}/"
-echo "3. (Optional) Configure permissions in ${CLAUDE_DIR}/settings.local.json"
+echo "1. Edit ${RULES_DIR}/project-context.md to describe your project"
+echo "2. Add project-specific rules to ${RULES_DIR}/"
+echo "3. Add project-specific skills to ${SKILLS_DIR}/"
 echo ""
-echo "When you open this project in Claude Code, the context will load automatically!"
+echo "Multi-Assistant Support:"
+echo "- Antigravity IDE / Gemini: reads .agents/rules/ and .agents/skills/ natively"
+echo "- Cursor: reads .cursorrules"
+echo "- Claude Code: loads .agents/rules/* via .claude/settings.local.json"
+echo ""

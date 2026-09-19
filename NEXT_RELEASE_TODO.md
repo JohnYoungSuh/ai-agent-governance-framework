@@ -5,6 +5,10 @@ This list is based on a full code review (June 19, 2026) against the current v2.
 ---
 ## 📍 Session Log
 
+### ✅ Session: September 19, 2026 (PM review + .claude vs .agents consolidation)
+- [x] **PM Review on Production Plan** — Produced `docs/reviews/pm_review_production_scale_plan.md` and updated `docs/PRODUCTION-SCALE-PLAN.md` with PM guidance (downstream PEP friction, HA fail-closed SLA, local DevX `make dev-up`) and Milestone 1 DoD.
+- [x] **.claude vs .agents Consolidation** — Established `.agents/` as canonical multi-assistant rules/skills standard. Updated `scripts/create-governed-project.sh`, `scripts/setup-claude-context.sh`, and `docs/ENFORCED-PROJECT-CREATION.md` to scaffold `.agents/rules/` + `.cursorrules` and generate `.claude/settings.local.json` adapters.
+
 ### ✅ Session: September 19, 2026 (Kernel hardening — company-minimum gaps)
 - [x] **SEC-001 residual** — `GPIS_JWT_SECRET` is required with no default; published defaults are rejected (`app/main.py` `get_jwt_secret()`).
 - [x] **AUDIT-002** — every `/api/v1/authorize` allow and deny emits a schema-validated `audit-trail.json` record (`app/audit.py`). Schema fields unchanged.

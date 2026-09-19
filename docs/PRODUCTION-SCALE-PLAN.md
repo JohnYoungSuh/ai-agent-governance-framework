@@ -151,6 +151,28 @@ Staffing that matches the code: one person on GPIS (B), one on Helm/NetworkPolic
 
 ---
 
-## First PR after this plan
+## Product Manager & Compliance Review Guidance (2026-09-19)
+
+Full review artifact: [docs/reviews/pm_review_production_scale_plan.md](reviews/pm_review_production_scale_plan.md) (Status: **Approved with Strategic Guidance**).
+
+### Enterprise Value Proposition & Buying Persona
+- **Target Buyer:** CISO, VP of Platform Engineering, Head of AI/ML.
+- **Customer Need:** Eliminate fear of autonomous agents executing destructive actions or leaking credentials in production.
+- **Core Value:** Transforming GPIS into an auditable, durable, multi-replica fail-closed gate with an instant survivable kill-switch.
+
+### ⚠️ PM Blind Spots & Risk Mitigations
+1. **Downstream PEP Adoption Friction (Phase 2.6):** A token issued by GPIS is ineffective if downstream services don't validate it. Deliver turn-key PEP integrations (Envoy/Traefik sidecar, Istio `RequestAuthentication`) and keep `agents/shared/gpis_client.py` zero-friction with automatic token fetching and retries.
+2. **High Availability & Fail-Closed Blast Radius (Phase 2.1):** Fail-closed for Tier 3/4 write operations is mandatory, but Tier 1 read operations require 99.99% availability. Enforce 3 replicas, PDB (`minAvailable: 2`), topology spread constraints, and strict readiness probe contracts.
+3. **Developer Experience (DevX) & Local Testing:** If mTLS and PKI require complex setup locally, developers will bypass GPIS. Provide `make dev-up` with self-signed test certs and mock keys for instantaneous local testing loops.
+
+---
+
+## First PR after this plan (Milestone 1)
 
 Phase 1.1 + 1.3 together: **authenticate authorize** and **persist suspensions in Redis**. That is the smallest change that turns “agents call GPIS in happy path” into “agents cannot skip GPIS after a restart or from a random pod.”
+
+### Milestone 1 Acceptance Criteria (Definition of Done):
+- [ ] Any call to `/api/v1/authorize` without a registered caller identity (mTLS SAN or CMDB-mapped API key) returns `401 Unauthorized`.
+- [ ] A kill-switch suspension issued via `/admin/v1/suspend/{agent_id}` is written to Redis with TTL/persistence.
+- [ ] When the GPIS pod is deleted (`kubectl delete pod`) and restarted, previously suspended agents remain suspended (DENIED) on restart.
+- [ ] End-to-end integration test passes in CI without manual environment intervention.

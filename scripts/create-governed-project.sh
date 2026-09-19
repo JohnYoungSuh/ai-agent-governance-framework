@@ -315,10 +315,10 @@ fi
 echo ""
 echo -e "${BLUE}Creating governed project structure...${NC}"
 
-mkdir -p "${PROJECT_PATH}"/{src,tests,docs,scripts,config,.claude/{prompts,commands}}
+mkdir -p "${PROJECT_PATH}"/{src,tests,docs,scripts,config,.agents/{rules,skills},.claude}
 
-# Create mandatory Claude Code context
-cat > "${PROJECT_PATH}/.claude/prompts/project-context.md" << EOF
+# Create canonical AI Agent Governance context (.agents/rules/project-context.md)
+cat > "${PROJECT_PATH}/.agents/rules/project-context.md" << EOF
 # ${PROJECT_NAME} - Project Context
 
 ## Project Overview
@@ -342,7 +342,7 @@ EOF
 
 case $AGENT_TIER in
     1)
-        cat >> "${PROJECT_PATH}/.claude/prompts/project-context.md" << EOF
+        cat >> "${PROJECT_PATH}/.agents/rules/project-context.md" << EOF
 - **Access**: Read-only operations
 - **Use Cases**: Documentation, analysis, Q&A
 - **Cost Target**: \$0.10-\$0.50/task
@@ -350,7 +350,7 @@ case $AGENT_TIER in
 EOF
         ;;
     2)
-        cat >> "${PROJECT_PATH}/.claude/prompts/project-context.md" << EOF
+        cat >> "${PROJECT_PATH}/.agents/rules/project-context.md" << EOF
 - **Access**: Development environment only
 - **Use Cases**: Coding, testing, refactoring
 - **Cost Target**: \$0.50-\$5.00/task
@@ -358,7 +358,7 @@ EOF
 EOF
         ;;
     3)
-        cat >> "${PROJECT_PATH}/.claude/prompts/project-context.md" << EOF
+        cat >> "${PROJECT_PATH}/.agents/rules/project-context.md" << EOF
 - **Access**: Production (with approval)
 - **Use Cases**: Deployments, runbooks, operations
 - **Cost Target**: \$1.00-\$10.00/task
@@ -368,7 +368,7 @@ EOF
 EOF
         ;;
     4)
-        cat >> "${PROJECT_PATH}/.claude/prompts/project-context.md" << EOF
+        cat >> "${PROJECT_PATH}/.agents/rules/project-context.md" << EOF
 - **Access**: Design & research
 - **Use Cases**: System design, POCs, architecture
 - **Cost Target**: \$5.00-\$50.00/task
@@ -379,7 +379,7 @@ EOF
         ;;
 esac
 
-cat >> "${PROJECT_PATH}/.claude/prompts/project-context.md" << EOF
+cat >> "${PROJECT_PATH}/.agents/rules/project-context.md" << EOF
 
 ### Budget & Cost Controls
 - **Monthly Budget**: \$${BUDGET_LIMIT}
@@ -404,9 +404,12 @@ ${COMPLIANCE}
 ├── docs/          # Documentation
 ├── scripts/       # Automation scripts
 ├── config/        # Configuration files
-└── .claude/       # Claude Code governance config
-    ├── prompts/   # Auto-loaded context
-    └── commands/  # Custom slash commands
+├── .agents/       # Canonical multi-agent governance (Antigravity/Gemini)
+│   ├── rules/     # Governance rules & project context
+│   └── skills/    # Custom agent skills
+├── .cursorrules   # Cursor IDE adapter
+└── .claude/       # Claude Code CLI adapter
+    └── settings.local.json
 \`\`\`
 
 ## Development Workflow
@@ -437,9 +440,19 @@ This project was created with governance enforcement on $(date +%Y-%m-%d).
 All AI agent operations are subject to the governance framework.
 EOF
 
-# Create settings.local.json with tier-appropriate permissions
+# Create Cursor IDE adapter (.cursorrules)
+cat > "${PROJECT_PATH}/.cursorrules" << 'EOF'
+# Cursor Rules — AI Agent Governance Framework
+# Canonical governance rules reside in .agents/rules/
+# See .agents/rules/project-context.md for project overview and agent constraints.
+EOF
+
+# Create Claude Code adapter (.claude/settings.local.json) importing .agents/rules/*
 cat > "${PROJECT_PATH}/.claude/settings.local.json" << EOF
 {
+  "include": [
+    ".agents/rules/*"
+  ],
   "permissions": {
     "allow": [
       "Read(//${PROJECT_PATH}/**)"
@@ -456,7 +469,7 @@ cat > "${PROJECT_PATH}/.claude/settings.local.json" << EOF
     "compliance": "${COMPLIANCE}",
     "budget_limit_monthly": ${BUDGET_LIMIT},
     "jira_cr_id": "${JIRA_CR_ID}",
-    "governance_framework_version": "2.1"
+    "governance_framework_version": "3.0.0"
   }
 }
 EOF
@@ -512,7 +525,9 @@ This project enforces AI governance from inception. See [GOVERNANCE.md](GOVERNAN
 - \`tests/\` - Test files
 - \`docs/\` - Documentation
 - \`scripts/\` - Automation
-- \`.claude/\` - AI governance config
+- \`.agents/\` - AI governance rules and skills
+- \`.cursorrules\` - Cursor IDE adapter
+- \`.claude/\` - Claude Code CLI adapter
 
 ## Development
 \`\`\`bash
@@ -530,7 +545,7 @@ This project enforces AI governance from inception. See [GOVERNANCE.md](GOVERNAN
 ${COMPLIANCE}
 
 ## Framework
-Built with [AI Agent Governance Framework v2.1](${HOME}/projects/ai-agent-governance-framework/)
+Built with [AI Agent Governance Framework v3.0.0](${HOME}/projects/ai-agent-governance-framework/)
 EOF
 
 # Create .gitignore
@@ -561,8 +576,8 @@ build/
 .DS_Store
 Thumbs.db
 
-# Keep Claude settings (contains governance metadata)
-# .claude/settings.local.json is tracked for accountability
+# Keep governance configs tracked for accountability
+# .agents/rules/, .cursorrules, and .claude/settings.local.json
 EOF
 
 # Initialize git with governance commit
@@ -578,7 +593,7 @@ Compliance: ${COMPLIANCE}
 Budget: \$${BUDGET_LIMIT}/month
 Created: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-🤖 Created with AI Agent Governance Framework v2.1
+🤖 Created with AI Agent Governance Framework v3.0.0
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
 echo ""
@@ -603,13 +618,16 @@ fi
 
 echo -e "${GREEN}Next Steps:${NC}"
 echo "1. cd ${PROJECT_PATH}"
-echo "2. Customize project-context.md with your specific details"
+echo "2. Customize .agents/rules/project-context.md with your specific details"
 echo "3. Add your source code to src/"
-echo "4. Open in Claude Code - governance context loads automatically!"
+echo "4. Open in Antigravity IDE, Cursor, or Claude Code — governance context loads automatically!"
 echo ""
 echo -e "${BLUE}Documentation:${NC}"
 echo "- Project governance: ${PROJECT_PATH}/GOVERNANCE.md"
-echo "- Claude context: ${PROJECT_PATH}/.claude/prompts/project-context.md"
+echo "- Agent context: ${PROJECT_PATH}/.agents/rules/project-context.md"
+echo "- Framework docs: ~/projects/ai-agent-governance-framework/docs/"
+echo ""
+echo -e "${GREEN}🎉 Your AI-driven project is ready with built-in accountability!${NC}"
 echo "- Framework docs: ~/projects/ai-agent-governance-framework/docs/"
 echo ""
 echo -e "${GREEN}🎉 Your AI-driven project is ready with built-in accountability!${NC}"
